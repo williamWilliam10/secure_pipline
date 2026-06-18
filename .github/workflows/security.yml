@@ -1,12 +1,22 @@
 name: Security Pipeline
 
 on:
+  # Lance le pipeline à chaque push sur main
   push:
     branches: [main]
+  # Lance le pipeline à chaque pull request visant main
   pull_request:
     branches: [main]
+  # Permet de lancer le pipeline manuellement depuis l'onglet Actions de GitHub
+  workflow_dispatch: {}
+
+# Restreint les droits du token GITHUB_TOKEN au strict nécessaire (lecture seule)
+# Principe du moindre privilège : le pipeline n'a besoin que de lire le code
+permissions:
+  contents: read
 
 jobs:
+  # --- JOB 1 : Détection de secrets ---
   secrets-scan:
     name: Gitleaks - Détection de secrets
     runs-on: ubuntu-latest
@@ -14,9 +24,36 @@ jobs:
       - name: Checkout du code
         uses: actions/checkout@v6
         with:
+          # Récupère tout l'historique git (pas juste le dernier commit)
+          # nécessaire pour que Gitleaks puisse scanner les anciens commits aussi
           fetch-depth: 0
 
       - name: Lancer Gitleaks
         uses: gitleaks/gitleaks-action@v3
         env:
+          # Token fourni automatiquement par GitHub, utilisé par Gitleaks
+          # pour commenter les PR en cas de secret détecté
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- JOB 2 : Analyse statique du code (SAST) ---
+  sast-scan:
+    name: semgrep/ci
+    # Ce job attend que secrets-scan soit terminé ET réussi avant de démarrer
+    # Logique "fail fast" : si un secret a fuité, pas besoin d'analyser le code
+    needs: secrets-scan
+    runs-on: ubuntu-latest
+    container:
+      # Image Docker officielle contenant Semgrep déjà installé
+      image: semgrep/semgrep
+    # Évite un bug de permissions connu : les PR de Dependabot ont des droits
+    # restreints qui font planter Semgrep, donc on skip dans ce cas précis
+    if: (github.actor != 'dependabot[bot]')
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v6
+
+      - name: Lancer Semgrep CI
+        run: semgrep ci
+        env:
+          # Token de connexion à la plateforme Semgrep AppSec (dashboard cloud)
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
