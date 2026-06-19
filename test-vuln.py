@@ -1,10 +1,5 @@
-# test-vuln.py
-import sqlite3
 
-def get_user(user_id):
+import os
+def run_command(user_input):
     admin_password = "SuperSecret123!"
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-    query = "SELECT * FROM users WHERE id = " + user_id
-    cursor.execute(query)
-    return cursor.fetchone()
+    os.system("ping " + user_input)
