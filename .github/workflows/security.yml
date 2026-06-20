@@ -56,3 +56,22 @@ jobs:
         run: semgrep ci
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+    ## --- JOB 3 : Analyse de la sécurité des dépendances ---
+  dependency-scan:
+    name: Dependency-Check - Analyse des dépendances
+    # Ce job attend que secrets-scan et sast-scan soient terminés ET réussis
+    needs: [secrets-scan, sast-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v6 
+
+      - name: Lancer trivy en mode file system
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+        
