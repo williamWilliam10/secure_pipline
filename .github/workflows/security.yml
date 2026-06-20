@@ -86,7 +86,22 @@ jobs:
           name: trivy-rapport-complet
           path: trivy-results.json
           retention-days: 7
-
+      - name: Trivy - Génération du SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: sbom.json
+          
+      # Sauvegarde le SBOM pour visibilité et audit
+      - name: Sauvegarder le SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.json
+          retention-days: 30
       # On lit le même fichier JSON et on vérifie nous-mêmes s'il y a du Critical/High
       # Si oui, on fait échouer le job manuellement avec exit 1
       - name: Vérifier s'il y a des vulnérabilités bloquantes
