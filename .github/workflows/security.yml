@@ -58,20 +58,43 @@ jobs:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
     ## --- JOB 3 : Analyse de la sécurité des dépendances ---
-  dependency-scan:
-    name: Dependency-Check - Analyse des dépendances
-    # Ce job attend que secrets-scan et sast-scan soient terminés ET réussis
-    needs: []
+  sca-scan:
+    name: Trivy - Analyse des dépendances (SCA)
+    needs: sast-scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
-        uses: actions/checkout@v6 
+        uses: actions/checkout@v6
 
-      - name: Lancer trivy en mode file system
+      # Étape 1 : scan complet, TOUTES les sévérités, ne bloque jamais
+      # Produit un rapport complet pour visibilité totale de l'équipe sécurité
+      - name: Trivy - Rapport complet (toutes sévérités)
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          exit-code: 0
+          format: table
+          output: trivy-rapport-complet.txt
+
+      # Étape 2 : vérification de blocage, seulement CRITICAL/HIGH
+      # Cette étape fait planter le job si elle trouve quelque chose
+      - name: Trivy - Vérification de blocage (Critical/High)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      # Étape 3 : sauvegarder le rapport complet comme artifact
+      # Téléchargeable depuis l'onglet Actions, même si le job échoue à l'étape 2
+      - name: Sauvegarder le rapport complet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-rapport-complet
+          path: trivy-rapport-complet.txt
+          retention-days: 7
         
