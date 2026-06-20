@@ -61,7 +61,7 @@ jobs:
   dependency-scan:
     name: Dependency-Check - Analyse des dépendances
     # Ce job attend que secrets-scan et sast-scan soient terminés ET réussis
-    needs: [secrets-scan, sast-scan]
+    needs: []
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
