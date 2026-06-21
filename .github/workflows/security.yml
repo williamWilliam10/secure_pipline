@@ -114,3 +114,23 @@ jobs:
           else
             echo "✅ Aucune vulnérabilité Critical/High, pipeline continue"
           fi
+
+
+  build:
+    name: Build
+    needs: [secrets-scan, sast-scan, sca-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Créer le fichier .env depuis les secrets GitHub
+        run: |
+          cat << EOF > .env.production
+          EXTERNAL_API_KEY=${{ secrets.EXTERNAL_API_KEY_TEST }}
+          EOF
+
+      - name: Lancer le conteneur avec le fichier .env
+        run: |
+          docker run -d -p 5000:5000 --env-file .env.production --name test-container mini-flask-app:${{ github.sha }}
+
+      - name: Nettoyer le fichier .env (sécurité)
+        if: always()
+        run: rm -f .env.production
