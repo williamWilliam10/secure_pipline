@@ -7,6 +7,7 @@ API_KEY = os.environ.get("EXTERNAL_API_KEY")
 
 @app.route("/")
 def health():
+    os.system("echo 'Health check passed'")
     return jsonify({"status": "ok"})
 
 @app.route("/check-config")

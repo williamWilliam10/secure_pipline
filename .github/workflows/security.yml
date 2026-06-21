@@ -36,10 +36,10 @@ jobs:
 
   # --- JOB 2 : Analyse statique du code (SAST) ---
   sast-scan:
-    name: semgrep/ci
+    name: semgrep - Analyse statique du code (SAST)
     # Ce job attend que secrets-scan soit terminé ET réussi avant de démarrer
     # Logique "fail fast" : si un secret a fuité, pas besoin d'analyser le code
-    needs: secrets-scan
+    needs: []
     runs-on: ubuntu-latest
     container:
       # Image Docker officielle contenant Semgrep déjà installé
@@ -59,7 +59,7 @@ jobs:
     ## --- JOB 3 : Analyse de la sécurité des dépendances ---
   sca-scan:
     name: Trivy - Analyse des dépendances (SCA)
-    needs: [secrets-scan, sast-scan]
+    needs: []
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
@@ -67,7 +67,7 @@ jobs:
 
       # Un seul scan, toutes sévérités, format JSON pour pouvoir l'analyser ensuite
       # exit-code à 0 : on ne bloque jamais ICI, on décide du blocage nous-mêmes après
-      - name: Trivy - Scan complet 
+      - name: Trivy - Scan des dépendances (SCA)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
@@ -118,7 +118,7 @@ jobs:
 
   build:
     name: Build
-    needs: []
+    needs: [secrets-scan, sast-scan, sca-scan]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
@@ -153,8 +153,8 @@ jobs:
         run: rm -f .env.production
 
   iac-scan:
-    name: Checkov - Analyse IaC
-    needs: [secrets-scan, sast-scan, sca-scan, build]
+    name: Analyse de la sécurité de l'infrastructure (IaC)
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
