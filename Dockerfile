@@ -1,15 +1,25 @@
-# Dockerfile
 FROM python:3.12-slim
+
+# 1. Variables d'environnement pour optimiser Python en conteneur
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# 2. On installe Gunicorn en plus de tes requirements
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir gunicorn
 
 COPY app.py .
 
-# Le secret EXTERNAL_API_KEY n'est PAS défini ici avec ENV
-# Il sera injecté au moment du "docker run", pas au moment du "docker build"
+# 3. SÉCURITÉ CRITIQUE : Création d'un utilisateur non-root
+# Checkov lèvera une alerte rouge si cette étape est manquante.
+RUN useradd -u 8888 appuser && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+# 4. On utilise Gunicorn au lieu de "python app.py"
+# C'est ici qu'on lie l'application à 0.0.0.0 pour que Docker expose le port.
+CMD ["gunicorn", "--workers=4", "--bind=0.0.0.0:5000", "app:app"]
