@@ -189,4 +189,31 @@ jobs:
             echo "✅ Aucune vulnérabilité IaC Critical/High, pipeline continue"
           fi
         
-    
+  deploy-staging:
+    name: Déployer en Staging
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher le déploiement Staging
+        run: curl -X POST "${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}"
+
+      - name: Attendre la fin du déploiement
+        run: sleep 60
+
+  dast-scan-staging:
+    name: OWASP ZAP - Test sur Staging
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lancer OWASP ZAP
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ secrets.STAGING_URL }}
+
+  deploy-production:
+    name: Déployer en Production
+    needs: [dast-scan-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher le déploiement Production
+        run: curl -X POST "${{ secrets.RENDER_PRODUCTION_DEPLOY_HOOK }}"
