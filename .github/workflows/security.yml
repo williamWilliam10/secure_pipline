@@ -13,7 +13,8 @@ on:
 # Restreint les droits du token GITHUB_TOKEN au strict nécessaire (lecture seule)
 # Principe du moindre privilège : le pipeline n'a besoin que de lire le code
 permissions:
-  contents: read   
+  contents: read
+  issues: write # nécessaire pour enregstre les rapport owazap  dans les artefacts   
 jobs:
   # --- JOB 1 : Détection de secrets ---
   secrets-scan:
@@ -191,7 +192,7 @@ jobs:
         
   deploy-staging:
     name: Déployer en Staging
-    needs: [build]
+    needs: [iac-scan]
     runs-on: ubuntu-latest
     steps:
       - name: Déclencher le déploiement Staging
@@ -209,6 +210,17 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: ${{ secrets.STAGING_URL }}
+    
+      - name: Sauvegarder les rapports ZAP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-rapport
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+          retention-days: 7
 
   deploy-production:
     name: Déployer en Production
