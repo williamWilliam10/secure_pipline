@@ -130,7 +130,14 @@ jobs:
 
       - name: Lancer le conteneur avec le fichier .env
         run: |
-          docker run -d -p 5000:5000 --env-file .env.production --name test-container mini-flask-app:${{ github.sha }}
+              docker run -d \
+              -p 127.0.0.1:5000:5000 \
+              --env-file .env.production \
+              --name test-container \
+              --read-only \
+              --tmpfs /tmp \
+              --security-opt no-new-privileges:true \
+              mini-flask-app:${{ github.sha }}
 
       - name: Nettoyer le fichier .env (sécurité)
         if: always()
