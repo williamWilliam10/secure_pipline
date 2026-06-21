@@ -60,7 +60,7 @@ jobs:
     ## --- JOB 3 : Analyse de la sécurité des dépendances ---
   sca-scan:
     name: Trivy - Analyse des dépendances (SCA)
-    needs: []
+    needs: [secrets-scan, sast-scan]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
@@ -79,6 +79,7 @@ jobs:
           output: trivy-results.json
 
       # Sauvegarde le rapport complet en artifact pour visibilité totale
+      # On peut le télécharger depuis l'onglet Actions de GitHub
       - name: Sauvegarder le rapport complet
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +87,7 @@ jobs:
           name: trivy-rapport-complet
           path: trivy-results.json
           retention-days: 7
+
       - name: Trivy - Génération du SBOM (CycloneDX)
         uses: aquasecurity/trivy-action@master
         with:
@@ -115,7 +117,6 @@ jobs:
             echo "✅ Aucune vulnérabilité Critical/High, pipeline continue"
           fi
 
-
   build:
     name: Build
     needs: [secrets-scan, sast-scan, sca-scan]
@@ -134,3 +135,42 @@ jobs:
       - name: Nettoyer le fichier .env (sécurité)
         if: always()
         run: rm -f .env.production
+
+  iac-scan:
+    name: Checkov - Analyse IaC
+    needs: [secrets-scan, sast-scan, sca-scan, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v6
+
+      - name: Lancer trivy pour l'analyse IaC
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          exit-code: 0
+          format: json
+          output: trivy-iac-results.json
+     
+      - name: Sauvegarder le rapport Trivy IaC
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-iac-rapport-complet
+          path: trivy-iac-results.json
+          retention-days: 7
+      
+      - name: Vérifier s'il y a des vulnérabilités IaC bloquantes
+        run: |
+          CRITICAL_HIGH_COUNT=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy-iac-results.json)
+          echo "Nombre de vulnérabilités IaC Critical/High trouvées : $CRITICAL_HIGH_COUNT"
+          if [ "$CRITICAL_HIGH_COUNT" -gt 0 ]; then
+            echo "❌ Pipeline bloqué : $CRITICAL_HIGH_COUNT vulnérabilité(s) IaC Critical/High détectée(s)"
+            exit 1
+          else
+            echo "✅ Aucune vulnérabilité IaC Critical/High, pipeline continue"
+          fi
+        
+    
