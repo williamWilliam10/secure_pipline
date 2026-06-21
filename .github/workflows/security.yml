@@ -13,8 +13,7 @@ on:
 # Restreint les droits du token GITHUB_TOKEN au strict nécessaire (lecture seule)
 # Principe du moindre privilège : le pipeline n'a besoin que de lire le code
 permissions:
-  contents: write # Nécessaire pour que Gitleaks puisse commenter les PR en cas de secret détecté
-
+  contents: read   
 jobs:
   # --- JOB 1 : Détection de secrets ---
   secrets-scan:
@@ -122,23 +121,33 @@ jobs:
     needs: []
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      # 2. ÉTAPE MANQUANTE 2 : Build de l'image en local sur le runner GitHub
+      - name: Build de l'image Docker
+        run: docker build -t mini-flask-app:${{ github.sha }} .
+
+      # 3. Ton étape de création du fichier .env
       - name: Créer le fichier .env depuis les secrets GitHub
         run: |
           cat << EOF > .env.production
           EXTERNAL_API_KEY=${{ secrets.EXTERNAL_API_KEY_TEST }}
           EOF
 
+      # 4. Ton étape de run (qui va maintenant fonctionner car l'image existe localement !)
       - name: Lancer le conteneur avec le fichier .env
         run: |
-              docker run -d \
-              -p 127.0.0.1:5000:5000 \
-              --env-file .env.production \
-              --name test-container \
-              --read-only \
-              --tmpfs /tmp \
-              --security-opt no-new-privileges:true \
-              mini-flask-app:${{ github.sha }}
+          docker run -d \
+          -p 127.0.0.1:5000:5000 \
+          --env-file .env.production \
+          --name test-container \
+          --read-only \
+          --tmpfs /tmp \
+          --security-opt no-new-privileges:true \
+          mini-flask-app:${{ github.sha }}
 
+      # 5. Ton étape de nettoyage
       - name: Nettoyer le fichier .env (sécurité)
         if: always()
         run: rm -f .env.production
