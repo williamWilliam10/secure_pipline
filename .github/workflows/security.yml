@@ -14,7 +14,8 @@ on:
 # Principe du moindre privilège : le pipeline n'a besoin que de lire le code
 permissions:
   contents: read
-  issues: write # nécessaire pour enregstre les rapport owazap  dans les artefacts   
+  issues: write # nécessaire pour enregstre les rapport owazap  dans les artefacts  
+  actions: write #Pour régler ton erreur actuelle et autoriser l'upload de l'artefact 
 jobs:
   # --- JOB 1 : Détection de secrets ---
   secrets-scan:
