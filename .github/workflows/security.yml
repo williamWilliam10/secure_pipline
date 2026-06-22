@@ -210,7 +210,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: ${{ secrets.STAGING_URL }}
-          artifact_name: 'zap-scan-report'    # ← AJOUTE CETTE LIGNE
+          artifact_name: 'zapreport'      
     
       - name: Sauvegarder les rapports ZAP
         if: always()
