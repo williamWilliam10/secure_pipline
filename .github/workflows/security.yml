@@ -119,81 +119,69 @@ jobs:
           fi
 
   build:
-    name: Build
+    name: Build et Push de l'image
     needs: [secrets-scan, sast-scan, sca-scan]
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4
-
-      # 2. ÉTAPE MANQUANTE 2 : Build de l'image en local sur le runner GitHub
-      - name: Build de l'image Docker
-        run: docker build -t mini-flask-app:${{ github.sha }} .
-
-      # 3. Ton étape de création du fichier .env
-      - name: Créer le fichier .env depuis les secrets GitHub
-        run: |
-          cat << EOF > .env.production
-          EXTERNAL_API_KEY=${{ secrets.EXTERNAL_API_KEY_TEST }}
-          EOF
-
-      # 4. Ton étape de run (qui va maintenant fonctionner car l'image existe localement !)
-      - name: Lancer le conteneur avec le fichier .env
-        run: |
-          docker run -d \
-          -p 127.0.0.1:5000:5000 \
-          --env-file .env.production \
-          --name test-container \
-          --read-only \
-          --tmpfs /tmp \
-          --security-opt no-new-privileges:true \
-          mini-flask-app:${{ github.sha }}
-
-      # 5. Ton étape de nettoyage
-      - name: Nettoyer le fichier .env (sécurité)
-        if: always()
-        run: rm -f .env.production
-
-  iac-scan:
-    name: Analyse de la sécurité de l'infrastructure (IaC)
-    needs: [build]
-    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # nécessaire pour pousser vers ghcr.io
     steps:
       - name: Checkout du code
         uses: actions/checkout@v6
 
-      - name: Lancer trivy pour l'analyse IaC
+      - name: Connexion à GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build et Push de l'image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: 
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+  image-scan:
+    name: Trivy - Scan de l'image construite
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connexion à GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trivy - Scan de l'image
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: config
-          scan-ref: .
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
           severity: CRITICAL,HIGH,MEDIUM,LOW
           exit-code: 0
           format: json
-          output: trivy-iac-results.json
-     
-      - name: Sauvegarder le rapport Trivy IaC
+          output: trivy-image-results.json
+
+      - name: Sauvegarder le rapport
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-iac-rapport-complet
-          path: trivy-iac-results.json
-          retention-days: 7
-      
-      - name: Vérifier s'il y a des vulnérabilités IaC bloquantes
+          name: trivy-image-rapport
+          path: trivy-image-results.json
+
+      - name: Vérifier les vulnérabilités bloquantes
         run: |
-          CRITICAL_HIGH_COUNT=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy-iac-results.json)
-          echo "Nombre de vulnérabilités IaC Critical/High trouvées : $CRITICAL_HIGH_COUNT"
+          CRITICAL_HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy-image-results.json)
           if [ "$CRITICAL_HIGH_COUNT" -gt 0 ]; then
-            echo "❌ Pipeline bloqué : $CRITICAL_HIGH_COUNT vulnérabilité(s) IaC Critical/High détectée(s)"
             exit 1
-          else
-            echo "✅ Aucune vulnérabilité IaC Critical/High, pipeline continue"
           fi
         
   deploy-staging:
     name: Déployer en Staging
-    needs: [iac-scan]
+    needs: [image-scan]
     runs-on: ubuntu-latest
     steps:
       - name: Déclencher le déploiement Staging
