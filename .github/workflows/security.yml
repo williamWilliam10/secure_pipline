@@ -124,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # nécessaire pour pousser vers ghcr.io
+      packages: write
     steps:
       - name: Checkout du code
         uses: actions/checkout@v6
@@ -136,14 +136,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Convertit le nom du repo en minuscule pour respecter la convention Docker
+      - name: Préparer le nom de l'image en minuscule
+        id: image-name
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Build et Push de l'image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ steps.image-name.outputs.name }}:${{ github.sha }}
+            ghcr.io/${{ steps.image-name.outputs.name }}:latest
+
   image-scan:
     name: Trivy - Scan de l'image construite
     needs: [build]
@@ -156,10 +162,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Même conversion en minuscule, répétée car c'est un job séparé
+      - name: Préparer le nom de l'image en minuscule
+        id: image-name
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Trivy - Scan de l'image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          image-ref: ghcr.io/${{ steps.image-name.outputs.name }}:${{ github.sha }}
           severity: CRITICAL,HIGH,MEDIUM,LOW
           exit-code: 0
           format: json
