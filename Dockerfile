@@ -18,7 +18,7 @@ COPY app.py .
 
 # 3. SÉCURITÉ CRITIQUE : Création d'un utilisateur non-root
 # Checkov lèvera une alerte rouge si cette étape est manquante.
-RUN useradd -u 8888 appuser && chown -R appuser:appuser /app
+RUN useradd -u 8888 -m -d /home/appuser appuser && chown -R appuser:appuser /app /home/appuser
 USER appuser
 
 EXPOSE 5000
