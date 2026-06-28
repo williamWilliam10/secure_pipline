@@ -7,8 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt .
-# 2. On installe Gunicorn en plus de tes requirements
-RUN pip install --no-cache-dir -r requirements.txt && \
+
+# 2. Mise à jour des paquets système (corrige les CVE connues) PUIS installation des dépendances Python
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir gunicorn
 
 COPY app.py .
