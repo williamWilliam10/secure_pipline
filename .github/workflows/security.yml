@@ -207,22 +207,27 @@ jobs:
     needs: [deploy-staging]
     runs-on: ubuntu-latest
     steps:
-      - name: Lancer OWASP ZAP
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: ${{ secrets.STAGING_URL }}
-          artifact_name: 'zapreport'      
-    
+      - name: Lancer le scan ZAP directement via Docker
+        run: |
+          mkdir -p zap-reports
+          chmod -R 777 zap-reports
+          docker run --rm \
+            -v $(pwd)/zap-reports:/zap/wrk:rw \
+            -t ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t ${{ secrets.STAGING_URL }} \
+            -J zap_report.json \
+            -w zap_report.md \
+            -r zap_report.html \
+            -I
+        continue-on-error: true
+
       - name: Sauvegarder les rapports ZAP
         if: always()
-        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: zap-rapport
-          path: |
-            report_html.html
-            report_json.json
-            report_md.md
+          path: zap-reports/
           retention-days: 7
 
   deploy-production:
