@@ -175,6 +175,7 @@ jobs:
           exit-code: 0
           format: json
           output: trivy-image-results.json
+          ignore-unfixed: true   # ignore automatiquement les CVE sans correctif disponible
 
       - name: Sauvegarder le rapport
         if: always()
