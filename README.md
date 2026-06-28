@@ -1,4 +1,4 @@
-# Secure Pipeline — Pipeline CI/CD sécurisé
+# Secure Pipeline ,Pipeline CI/CD sécurisé
 
 ![Security Pipeline](https://github.com/williamWilliam10/secure_pipline/actions/workflows/security.yml/badge.svg)
 
@@ -10,7 +10,7 @@ Ce projet a été construit comme labo d'apprentissage pratique pour comprendre 
 
 ![Architecture du pipeline](./architecture.svg)
 
-Le pipeline se déclenche à la fois sur un push direct vers `main` et sur toute pull request visant `main` — une PR ne peut donc pas être mergée sans que l'ensemble des contrôles de sécurité ait été exécuté.
+Le pipeline se déclenche à la fois sur un push direct vers `main` et sur toute pull request visant `main` ,une PR ne peut donc pas être mergée sans que l'ensemble des contrôles de sécurité ait été exécuté.
 
 Il suit une logique de "fail fast, fail cheap" : les trois scans les plus rapides et les moins coûteux (détection de secrets, analyse du code, analyse des dépendances) tournent en parallèle. Le build de l'image Docker n'est déclenché que si les trois ont réussi. Chaque étape suivante dépend strictement de la précédente, jusqu'au déploiement en production qui n'intervient qu'après validation du test dynamique sur l'environnement de staging.
 
@@ -33,19 +33,19 @@ Il suit une logique de "fail fast, fail cheap" : les trois scans les plus rapide
 
 ### 1. Scans parallèles
 
-**Gitleaks** scanne l'intégralité de l'historique git à la recherche de secrets (clés API, tokens, mots de passe). Toute détection bloque immédiatement le pipeline — un secret qui fuite est toujours considéré comme critique, sans nuance de sévérité.
+**Gitleaks** scanne l'intégralité de l'historique git à la recherche de secrets (clés API, tokens, mots de passe). Toute détection bloque immédiatement le pipeline ,un secret qui fuite est toujours considéré comme critique, sans nuance de sévérité.
 
-**Semgrep** analyse le code source avec les règles publiques du registre (`auto`) combinées à une règle personnalisée détectant les identifiants codés en dur (`hardcoded-password-assignment`). Une politique de blocage configurée sur la plateforme Semgrep AppSec définit qu'un finding ne bloque le pipeline que s'il est à la fois de sévérité élevée et de confiance élevée — ce qui réduit les faux positifs bloquants tout en gardant une visibilité complète sur l'ensemble des résultats.
+**Semgrep** analyse le code source avec les règles publiques du registre (`auto`) combinées à une règle personnalisée détectant les identifiants codés en dur (`hardcoded-password-assignment`). Une politique de blocage configurée sur la plateforme Semgrep AppSec définit qu'un finding ne bloque le pipeline que s'il est à la fois de sévérité élevée et de confiance élevée ,ce qui réduit les faux positifs bloquants tout en gardant une visibilité complète sur l'ensemble des résultats.
 
-**Trivy SCA** scanne les dépendances du projet à la recherche de CVE connues, et génère en parallèle un SBOM au format CycloneDX, conservé en artifact pour la traçabilité de la supply chain. Le rapport complet (toutes sévérités) est toujours sauvegardé ; seul un sous-ensemble Critical/High déclenche le blocage, calculé explicitement via `jq` plutôt que de filtrer dès la détection — ce choix permet de garder une visibilité totale sur les vulnérabilités moins critiques sans qu'elles bloquent le pipeline.
+**Trivy SCA** scanne les dépendances du projet à la recherche de CVE connues, et génère en parallèle un SBOM au format CycloneDX, conservé en artifact pour la traçabilité de la supply chain. Le rapport complet (toutes sévérités) est toujours sauvegardé ; seul un sous-ensemble Critical/High déclenche le blocage, calculé explicitement via `jq` plutôt que de filtrer dès la détection ,ce choix permet de garder une visibilité totale sur les vulnérabilités moins critiques sans qu'elles bloquent le pipeline.
 
 ### 2. Build et push de l'image
 
-L'image Docker est construite une seule fois et poussée vers GitHub Container Registry, taguée à la fois avec le hash du commit (`github.sha`) et `latest`. Ce choix résout un problème de build provenance identifié en cours de projet : sans cette étape, une plateforme de déploiement comme Render reconstruirait sa propre image à partir du code source, rendant caduque tout le travail de scan effectué en amont — l'image testée ne serait jamais l'image réellement déployée.
+L'image Docker est construite une seule fois et poussée vers GitHub Container Registry, taguée à la fois avec le hash du commit (`github.sha`) et `latest`. Ce choix résout un problème de build provenance identifié en cours de projet : sans cette étape, une plateforme de déploiement comme Render reconstruirait sa propre image à partir du code source, rendant caduque tout le travail de scan effectué en amont ,l'image testée ne serait jamais l'image réellement déployée.
 
 ### 3. Scan de l'image construite
 
-Trivy scanne cette fois l'image Docker elle-même (système de base, paquets installés), pas seulement les dépendances applicatives. Les vulnérabilités sans correctif disponible (`ignore-unfixed`) sont exclues du calcul de blocage — une pratique courante face aux CVE de paquets système pour lesquels aucun patch n'existe encore.
+Trivy scanne cette fois l'image Docker elle-même (système de base, paquets installés), pas seulement les dépendances applicatives. Les vulnérabilités sans correctif disponible (`ignore-unfixed`) sont exclues du calcul de blocage ,une pratique courante face aux CVE de paquets système pour lesquels aucun patch n'existe encore.
 
 ### 4. Déploiement en Staging
 
@@ -53,7 +53,7 @@ Le service Render est configuré en mode "Existing Image" plutôt qu'en connexio
 
 ### 5. Test dynamique (DAST)
 
-OWASP ZAP exécute un scan baseline contre l'application déployée en staging, à la recherche de vulnérabilités observables uniquement à l'exécution (en-têtes de sécurité manquants, configuration TLS, etc.) — complémentaires à ce que les scans statiques ne peuvent pas détecter.
+OWASP ZAP exécute un scan baseline contre l'application déployée en staging, à la recherche de vulnérabilités observables uniquement à l'exécution (en-têtes de sécurité manquants, configuration TLS, etc.) ,complémentaires à ce que les scans statiques ne peuvent pas détecter.
 
 ### 6. Déploiement en Production
 
@@ -62,7 +62,7 @@ Déclenché uniquement après le succès du test ZAP, garantissant qu'aucune ver
 ## Décisions et compromis techniques
 
 - **Parallélisation des trois premiers scans** plutôt qu'un enchaînement séquentiel strict, pour réduire le temps de feedback développeur sans sacrifier la sécurité (l'étape de build attend la réussite des trois).
-- **Visibilité complète, blocage sélectif** : chaque outil de scan produit un rapport exhaustif sauvegardé en artifact, tandis que seul un sous-ensemble de sévérités déclenche un blocage réel — évite qu'une vulnérabilité mineure bloque inutilement un déploiement, sans jamais perdre l'information pour autant.
+- **Visibilité complète, blocage sélectif** : chaque outil de scan produit un rapport exhaustif sauvegardé en artifact, tandis que seul un sous-ensemble de sévérités déclenche un blocage réel ,évite qu'une vulnérabilité mineure bloque inutilement un déploiement, sans jamais perdre l'information pour autant.
 - **Utilisateur non-root dans le conteneur** (Dockerfile), conformément aux bonnes pratiques de durcissement Docker.
 - **Image construite une seule fois, jamais reconstruite par la plateforme de déploiement**, pour garantir que l'image scannée est strictement identique à l'image déployée.
 - **Secrets gérés exclusivement via GitHub Secrets**, jamais en dur dans le code ou les fichiers de configuration, avec nettoyage explicite des fichiers `.env` générés en cours de pipeline.
@@ -86,4 +86,4 @@ curl http://localhost:5000/check-config
 
 ## Auteur
 
-William Lowe — [github.com/williamWilliam10](https://github.com/williamWilliam10) · [lowewilliam.com](https://lowewilliam.com)
+William Lowe ,[github.com/williamWilliam10](https://github.com/williamWilliam10) · [lowewilliam.com](https://lowewilliam.com)
