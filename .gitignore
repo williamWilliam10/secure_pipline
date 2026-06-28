@@ -1,2 +1,29 @@
-vscode
-gitignore
+# Éditeurs / IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+.env
+.env.production
+
+# Fichiers de rapports générés par les scans (ne pas commiter, ils sont en artifacts)
+trivy-results.json
+trivy-image-results.json
+trivy-iac-results.json
+sbom.json
+zap-reports/
+report_*.html
+report_*.json
+report_*.md
+
+# Fichiers de test temporaires
+test-secret.txt
+test-vuln.py
+api_test.txt
+
+# Système
+.DS_Store
