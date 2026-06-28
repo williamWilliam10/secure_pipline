@@ -10,7 +10,9 @@ Ce projet a été construit comme labo d'apprentissage pratique pour comprendre 
 
 ![Architecture du pipeline](./architecture.svg)
 
-Le pipeline suit une logique de "fail fast, fail cheap" : les trois scans les plus rapides et les moins coûteux (détection de secrets, analyse du code, analyse des dépendances) tournent en parallèle. Le build de l'image Docker n'est déclenché que si les trois ont réussi. Chaque étape suivante dépend strictement de la précédente, jusqu'au déploiement en production qui n'intervient qu'après validation du test dynamique sur l'environnement de staging.
+Le pipeline se déclenche à la fois sur un push direct vers `main` et sur toute pull request visant `main` — une PR ne peut donc pas être mergée sans que l'ensemble des contrôles de sécurité ait été exécuté.
+
+Il suit une logique de "fail fast, fail cheap" : les trois scans les plus rapides et les moins coûteux (détection de secrets, analyse du code, analyse des dépendances) tournent en parallèle. Le build de l'image Docker n'est déclenché que si les trois ont réussi. Chaque étape suivante dépend strictement de la précédente, jusqu'au déploiement en production qui n'intervient qu'après validation du test dynamique sur l'environnement de staging.
 
 ## Stack technique
 
