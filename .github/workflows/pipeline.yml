@@ -7,9 +7,15 @@ on:
     branches: [main]
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  issues: write
+  actions: write
+  packages: write
+
 jobs:
   security-scans:
-    name: Scans de sécurité et tests 
+    name: Scans de sécurité et tests
     uses: ./.github/workflows/_security-scans.yml
     secrets: inherit
 
