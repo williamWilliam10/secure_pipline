@@ -1,0 +1,123 @@
+name: Security Scans (reusable)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+jobs:
+  # --- JOB 1 : Détection de secrets ---
+  secrets-scan:
+    name: Gitleaks - Détection de secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Lancer Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- JOB 2 : Analyse statique du code (SAST) ---
+  sast-scan:
+    name: semgrep - Analyse statique du code (SAST)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    if: (github.actor != 'dependabot[bot]')
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v6
+
+      - name: Lancer Semgrep CI
+        run: semgrep ci
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  # --- JOB 3 : Analyse de la sécurité des dépendances ---
+  sca-scan:
+    name: Trivy - Analyse des dépendances (SCA)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v6
+
+      - name: Trivy - Scan des dépendances (SCA)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          exit-code: 0
+          format: json
+          output: trivy-results.json
+
+      - name: Sauvegarder le rapport complet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-rapport-complet
+          path: trivy-results.json
+          retention-days: 7
+
+      - name: Trivy - Génération du SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: sbom.json
+
+      - name: Sauvegarder le SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.json
+          retention-days: 30
+
+      - name: Vérifier s'il y a des vulnérabilités bloquantes
+        run: |
+          CRITICAL_HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy-results.json)
+          echo "Nombre de vulnérabilités Critical/High trouvées : $CRITICAL_HIGH_COUNT"
+          if [ "$CRITICAL_HIGH_COUNT" -gt 0 ]; then
+            echo "❌ Pipeline bloqué : $CRITICAL_HIGH_COUNT vulnérabilité(s) Critical/High détectée(s)"
+            exit 1
+          else
+            echo "✅ Aucune vulnérabilité Critical/High, pipeline continue"
+          fi
+
+  # --- JOB 4 : Tests unitaires ---
+  unit-tests:
+    name: Pytest - Tests unitaires
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v6
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Installer les dépendances
+        run: |
+          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir pytest pytest-cov
+
+      - name: Lancer les tests unitaires avec couverture de code
+        run: pytest test_app.py -v --cov=app --cov-report=term-missing --cov-report=xml
+
+      - name: Sauvegarder le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
