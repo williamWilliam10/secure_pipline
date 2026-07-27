@@ -30,25 +30,28 @@ jobs:
         with:
           path: reports
 
+
       ###############################################################
-      # Debug
+      # Vérification des fichiers téléchargés
       ###############################################################
 
-      - name: Afficher l'arborescence
+      - name: Afficher l'arborescence des rapports
         run: |
           echo "===== Rapports téléchargés ====="
           ls -R reports
 
+
       ###############################################################
-      # Fonction d'import
+      # Import DefectDojo
       ###############################################################
 
-      - name: Importer les rapports
+      - name: Importer les rapports dans DefectDojo
         shell: bash
         env:
           DD_URL: ${{ secrets.DEFECTDOJO_URL }}
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
+
         run: |
 
           import_scan () {
@@ -56,20 +59,24 @@ jobs:
             FILE=$1
             TYPE=$2
 
+
             if [ ! -f "$FILE" ]; then
-              echo "Rapport absent : $FILE"
+              echo "⚠️ Rapport absent : $FILE"
               return
             fi
 
+
             echo ""
             echo "========================================="
-            echo "Import de $FILE"
-            echo "Type : $TYPE"
+            echo "Import de : $FILE"
+            echo "Type      : $TYPE"
             echo "========================================="
 
+
             curl --fail \
-              -X POST "${DD_URL}/api/v2/reimport-scan/" \
+              -X POST "${DD_URL}/api/v2/import-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
+              -H "Accept: application/json" \
               -F "engagement=${DD_ENGAGEMENT}" \
               -F "scan_type=${TYPE}" \
               -F "file=@${FILE}" \
@@ -78,19 +85,38 @@ jobs:
               -F "close_old_findings=false" \
               -F "minimum_severity=Info"
 
+
+            echo "✅ Import terminé : $FILE"
+
           }
 
-          #########################################################
 
-          import_scan "reports/trivy-rapport-complet/trivy-results.json" "Trivy Scan"
+          ###########################################################
+          # Imports des rapports
+          ###########################################################
 
-          import_scan "reports/trivy-image-rapport/trivy-image-results.json" "Trivy Scan"
+          import_scan \
+            "reports/trivy-rapport-complet/trivy-results.json" \
+            "Trivy Scan"
 
-          import_scan "reports/zap-rapport/zap_report.json" "ZAP Scan"
 
-          import_scan "reports/sbom-cyclonedx/sbom.json" "CycloneDX"
+          import_scan \
+            "reports/trivy-image-rapport/trivy-image-results.json" \
+            "Trivy Scan"
 
-          import_scan "reports/gitleaks-rapport/gitleaks-report.json" "Gitleaks Scan"
+
+          import_scan \
+            "reports/zap-rapport/zap_report.json" \
+            "ZAP Scan"
+
+
+          import_scan \
+            "reports/sbom-cyclonedx/sbom.json" \
+            "CycloneDX Scan"
+
+
 
           echo ""
-          echo "Tous les imports terminés."
+          echo "========================================="
+          echo "Tous les imports DefectDojo terminés"
+          echo "========================================="

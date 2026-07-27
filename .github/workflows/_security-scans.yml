@@ -25,18 +25,7 @@ jobs:
         uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v3.2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          # On demande à Gitleaks de générer un rapport JSON
-          args: detect --report-path gitleaks-report.json --report-format json
-        continue-on-error: true # Permet de continuer pour uploader le rapport même si des secrets sont trouvés
-
-      - name: Sauvegarder le rapport Gitleaks en artefact
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: gitleaks-rapport
-          path: gitleaks-report.json
-          retention-days: 7  
+          
 
   # --- JOB 2 : Analyse statique du code (SAST) ---
   sast-scan:
@@ -74,7 +63,7 @@ jobs:
 
       - name: Sauvegarder le rapport complet
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a 
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
         with:
           name: trivy-rapport-complet
           path: trivy-results.json
