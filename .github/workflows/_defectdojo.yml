@@ -28,7 +28,7 @@ jobs:
     steps:
 
       - name: Télécharger les artefacts
-        uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
+        uses: actions/download-artifact@v4
         with:
           path: reports
 
@@ -68,7 +68,7 @@ jobs:
 
             if [ ! -f "$FILE" ]; then
 
-              echo "Fichier absent"
+              echo "Fichier absent : $FILE"
 
               return
 
@@ -80,7 +80,7 @@ jobs:
             ls -lh "$FILE"
 
 
-            curl -v \
+            curl \
               -X POST "${DD_URL}/api/v2/import-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
               -F "engagement=${DD_ENGAGEMENT}" \
@@ -93,18 +93,32 @@ jobs:
 
 
 
+          # ===============================
+          # Trivy SCA dépendances
+          # ===============================
+
           import_scan \
           "reports/trivy-rapport-complet/trivy-results.json" \
-          "Trivy"
+          "Trivy Scan"
 
+
+
+          # ===============================
+          # SBOM CycloneDX
+          # ===============================
 
           import_scan \
           "reports/sbom-cyclonedx/sbom.json" \
-          "CycloneDX SBOM"
+          "CycloneDX Scan"
 
+
+
+          # ===============================
+          # OWASP ZAP DAST
+          # ===============================
 
           import_scan \
-          "reports/zap-rapport/zap_report.json" \
+          "reports/zap-rapport/zap_report.xml" \
           "ZAP Scan"
 
 
