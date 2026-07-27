@@ -26,7 +26,7 @@ jobs:
       ###############################################################
 
       - name: Télécharger tous les artefacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
         with:
           path: reports
 
