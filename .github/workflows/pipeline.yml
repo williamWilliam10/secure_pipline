@@ -17,16 +17,19 @@ jobs:
   security-scans:
     name: Scans de sécurité et tests
     uses: ./.github/workflows/_security-scans.yml
-    #secrets: inherit
-
+    secrets: 
+        SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
   build-and-scan:
     name: Build et scan de l'image
     needs: [security-scans]
     uses: ./.github/workflows/_build.yml
-    #secrets: inherit
+  
 
   deploy:
     name: Déploiement
     needs: [build-and-scan]
     uses: ./.github/workflows/_deploy.yml
-    #secrets: inherit
+    secrets:
+      RENDER_PRODUCTION_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_DEPLOY_HOOK }}
+      RENDER_STAGING_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}
+      STAGING_URL: ${{ secrets.STAGING_URL }}
