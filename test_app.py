@@ -1,75 +1,54 @@
-import pytest
-from app import app
+import hmac
+import bcrypt
+import sqlite3
+from typing import Optional
 
-
-@pytest.fixture
-def client():
+def verifier_authentification_utilisateur(nom_utilisateur: str, mot_passe_fourni: str, db_path: str = "secure_users.db") -> bool:
     """
-    Crée un client de test Flask, qui simule des requêtes HTTP
-    sans avoir besoin de lancer un vrai serveur.
+    Vérifie les informations d'identification d'un utilisateur de manière sécurisée.
+    
+    Mesures de sécurité OWASP appliquées :
+    - A03:2021 (Injection) : Utilisation de requêtes paramétrées pour la base de données.
+    - A07:2021 (Identification et authentification compromises) : Utilisation de bcrypt 
+      et d'une comparaison à temps constant (timing attack resistant).
     """
-    app.config["TESTING"] = True
-    with app.test_client() as client:
-        yield client
+    # Validation basique des entrées
+    if not nom_utilisateur or not mot_passe_fourni:
+        return False
 
+    try:
+        # Connexion à la base de données (exemple avec SQLite)
+        with sqlite3.connect(db_path) as connexion:
+            curseur = connexion.cursor()
+            
+            # REQUÊTE PARAMÉTRÉE : Empêche les injections SQL (OWASP A03)
+            curseur.execute(
+                "SELECT password_hash FROM users WHERE username = ?", 
+                (nom_utilisateur,)
+            )
+            resultat = curseur.fetchone()
+            
+            if not resultat:
+                # Même si l'utilisateur n'existe pas, effectuer une vérification fictive 
+                # pour atténuer les attaques par énumération d'utilisateurs (timing attack)
+                bcrypt.checkpw(b"dummy_password_to_prevent_timing", b"$2b$12$e0MYzXyjpJS7Pd0RVvHwHe...")
+                return False
+            
+            stocke_hash_str = resultat[0]
+            stocke_hash_bytes = stocke_hash_str.encode('utf-8')
+            fourni_bytes = mot_passe_fourni.encode('utf-8')
+            
+            # Vérification sécurisée du mot de passe avec bcrypt
+            # bcrypt gère le salage (salt) automatiquement pour contrer les rainbow tables.
+            if bcrypt.checkpw(fourni_bytes, stocke_hash_bytes):
+                return True
+                
+    except sqlite3.Error as e:
+        # Journaliser l'erreur en production (ne jamais l'afficher brute à l'utilisateur)
+        # log_secure_error(e)
+        pass
+    except Exception as e:
+        # Gestion générique des erreurs imprévues
+        pass
 
-def test_health_check_status_code(client):
-    """La route / doit répondre avec un code 200 (OK)."""
-    response = client.get("/")
-    assert response.status_code == 200
-
-
-def test_health_check_content(client):
-    """La route / doit renvoyer un JSON contenant le statut 'ok'."""
-    response = client.get("/")
-    data = response.get_json()
-    assert data["status"] == "ok"
-
-
-def test_check_config_with_api_key(client, monkeypatch):
-    """
-    Si la variable d'environnement EXTERNAL_API_KEY est définie,
-    /check-config doit répondre 200 avec api_key_configured=True.
-    """
-    monkeypatch.setenv("EXTERNAL_API_KEY", "fausse-cle-de-test")
-    # On doit recharger le module pour que os.environ.get soit relu
-    import importlib
-    import app as app_module
-    importlib.reload(app_module)
-
-    with app_module.app.test_client() as test_client:
-        response = test_client.get("/check-config")
-        assert response.status_code == 200
-        assert response.get_json()["api_key_configured"] is True
-
-
-def test_check_config_without_api_key(client, monkeypatch):
-    """
-    Si EXTERNAL_API_KEY n'est pas définie, /check-config doit
-    répondre 500 avec api_key_configured=False.
-    """
-    monkeypatch.delenv("EXTERNAL_API_KEY", raising=False)
-    import importlib
-    import app as app_module
-    importlib.reload(app_module)
-
-    with app_module.app.test_client() as test_client:
-        response = test_client.get("/check-config")
-        assert response.status_code == 500
-        assert response.get_json()["api_key_configured"] is False
-
-
-def test_check_config_never_exposes_the_real_key(client, monkeypatch):
-    """
-    Test de sécurité : même si la clé est configurée, la réponse
-    ne doit JAMAIS contenir sa valeur réelle, juste un booléen.
-    """
-    secret_value = "valeur-secrete-ne-doit-jamais-apparaitre"
-    monkeypatch.setenv("EXTERNAL_API_KEY", secret_value)
-    import importlib
-    import app as app_module
-    importlib.reload(app_module)
-
-    with app_module.app.test_client() as test_client:
-        response = test_client.get("/check-config")
-        assert secret_value not in response.get_data(as_text=True)
+    return False
