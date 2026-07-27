@@ -10,56 +10,33 @@ on:
       STAGING_URL:
         required: true
 
-
 permissions:
   contents: read
   issues: write
   actions: write
   packages: write
 
-
 jobs:
-
-
   deploy-staging:
-
     name: Déployer en Staging
-
     runs-on: ubuntu-latest
-
     steps:
-
       - name: Déclencher le déploiement Staging
         run: curl -X POST "${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}"
-
 
       - name: Attendre la fin du déploiement
         run: sleep 60
 
-
-
   dast-scan-staging:
-
     name: OWASP ZAP - Test sur Staging
-
     needs: [deploy-staging]
-
     runs-on: ubuntu-latest
-
-
     steps:
-
-
-      - name: Lancer le scan ZAP directement via Docker
-
+      - name: Lancer le scan ZAP via Docker
         continue-on-error: true
-
         run: |
-
           mkdir -p zap-reports
-
           chmod -R 777 zap-reports
-
 
           docker run --rm \
             -v $(pwd)/zap-reports:/zap/wrk:rw \
@@ -72,51 +49,25 @@ jobs:
             -r zap_report.html \
             -I
 
-
-
-      - name: Vérifier les rapports ZAP générés
-
+      - name: Vérifier les rapports ZAP
         if: always()
-
         run: |
-
           echo "===== RAPPORTS ZAP ====="
-
           ls -lh zap-reports/
-
           file zap-reports/* || true
 
-
-
       - name: Sauvegarder les rapports ZAP
-
         if: always()
-
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-
         with:
-
           name: zap-rapport
-
           path: zap-reports/
-
           retention-days: 7
 
-
-
-
   deploy-production:
-
     name: Déployer en Production
-
     needs: [dast-scan-staging]
-
     runs-on: ubuntu-latest
-
-
     steps:
-
-
       - name: Déclencher le déploiement Production
-
         run: curl -X POST "${{ secrets.RENDER_PRODUCTION_DEPLOY_HOOK }}"

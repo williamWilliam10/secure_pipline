@@ -12,37 +12,25 @@ permissions:
   actions: write
 
 jobs:
-  # ==================================================
-  # JOB 1 : Détection de secrets
-  # ==================================================
 
   secrets-scan:
     name: Gitleaks - Détection de secrets
-
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout du code
-
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
-
         with:
           fetch-depth: 0
 
       - name: Installer Gitleaks
-
         run: |
-
           curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.18.4_linux_x64.tar.gz -o gitleaks.tar.gz
-
           tar -xzf gitleaks.tar.gz
-
           sudo mv gitleaks /usr/local/bin/gitleaks
 
       - name: Scanner avec Gitleaks
-
         run: |
-
           gitleaks detect \
           --source . \
           --report-format json \
@@ -50,25 +38,16 @@ jobs:
           --exit-code 0
 
       - name: Sauvegarder rapport Gitleaks
-
         if: always()
-
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-
         with:
           name: gitleaks-report
-
           path: gitleaks-report.json
-
           retention-days: 7
 
-  # ==================================================
-  # JOB 2 : Analyse statique du code (SAST)
-  # ==================================================
 
   sast-scan:
     name: Semgrep - Analyse statique du code (SAST)
-
     runs-on: ubuntu-latest
 
     container:
@@ -78,156 +57,100 @@ jobs:
 
     steps:
       - name: Checkout du code
-
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
 
       - name: Lancer Semgrep Scan
-
         run: |
-
           semgrep scan \
           --config auto \
           --json \
           --output semgrep-report.json
 
       - name: Sauvegarder rapport Semgrep
-
         if: always()
-
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-
         with:
           name: semgrep-report
-
           path: semgrep-report.json
-
           retention-days: 7
 
-  # ==================================================
-  # JOB 3 : Analyse des dépendances (SCA)
-  # ==================================================
 
   sca-scan:
     name: Trivy - Analyse des dépendances (SCA)
-
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout du code
-
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
 
-      - name: Trivy - Scan des dépendances (SCA)
-
+      - name: Trivy - Scan des dépendances
         uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8
-
         with:
           scan-type: fs
-
           scan-ref: .
-
           severity: CRITICAL,HIGH,MEDIUM,LOW
-
           exit-code: 0
-
           format: json
-
           output: trivy-results.json
 
-      - name: Sauvegarder le rapport complet Trivy
-
+      - name: Sauvegarder rapport Trivy
         if: always()
-
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-
         with:
           name: trivy-rapport-complet
-
           path: trivy-results.json
-
           retention-days: 7
 
-      - name: Trivy - Génération du SBOM CycloneDX
-
+      - name: Trivy - Génération SBOM CycloneDX
         uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8
-
         with:
           scan-type: fs
-
           scan-ref: .
-
           format: cyclonedx
-
           output: sbom.json
 
       - name: Sauvegarder SBOM CycloneDX
-
         if: always()
-
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-
         with:
           name: sbom-cyclonedx
-
           path: sbom.json
-
           retention-days: 30
 
       - name: Vérifier vulnérabilités bloquantes
-
         run: |
-
-
           CRITICAL_HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy-results.json)
-
 
           echo "Nombre de vulnérabilités Critical/High trouvées : $CRITICAL_HIGH_COUNT"
 
-
           if [ "$CRITICAL_HIGH_COUNT" -gt 0 ]; then
-
             echo "❌ Pipeline bloqué : $CRITICAL_HIGH_COUNT vulnérabilité(s) Critical/High détectée(s)"
-
             exit 1
-
-
           else
-
             echo "✅ Aucune vulnérabilité Critical/High, pipeline continue"
-
           fi
 
-  # ==================================================
-  # JOB 4 : Tests unitaires
-  # ==================================================
 
   unit-tests:
     name: Pytest - Tests unitaires
-
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout du code
-
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+
       - name: Installer Python
-
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-
         with:
           python-version: "3.12"
+
       - name: Installer les dépendances
-
         run: |
-
-
           pip install --no-cache-dir -r requirements.txt
-
           pip install --no-cache-dir pytest pytest-cov
 
       - name: Lancer les tests unitaires avec couverture
         run: |
-
           pytest test_app.py -v \
           --cov=app \
           --cov-report=term-missing \
