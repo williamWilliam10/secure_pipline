@@ -33,3 +33,15 @@ jobs:
       RENDER_PRODUCTION_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_DEPLOY_HOOK }}
       RENDER_STAGING_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}
       STAGING_URL: ${{ secrets.STAGING_URL }}
+
+  defectdojo:
+    name: Import vers DefectDojo
+    needs:
+      - security-scans
+      - build-and-scan
+      - deploy
+    uses: ./.github/workflows/_defectdojo.yml
+    secrets:
+      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
+      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+      DEFECTDOJO_ENGAGEMENT_ID: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
