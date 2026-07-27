@@ -2,6 +2,7 @@ import unittest
 import sqlite3
 import bcrypt
 import os
+from app import verifier_authentification_utilisateur
 
 # Importez votre fonction depuis votre fichier principal (ex: from main import verifier_authentification_utilisateur)
 
