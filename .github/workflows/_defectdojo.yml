@@ -15,67 +15,139 @@ permissions:
   actions: read
 
 jobs:
+
   defectdojo:
+
     name: Import des rapports dans DefectDojo
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Télécharger les artefacts
         uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
         with:
           path: reports
 
-      - name: Vérifier les rapports
-        run: ls -R reports
+
+      - name: Vérifier les rapports disponibles
+        run: |
+          echo "===== ARBORESCENCE DES RAPPORTS ====="
+          ls -R reports || true
+
 
       - name: Import DefectDojo
+
         shell: bash
+
         env:
           DD_URL: ${{ secrets.DEFECTDOJO_URL }}
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
 
+
         run: |
 
           import_scan () {
+
             FILE=$1
             TYPE=$2
 
-            echo "=============================="
+
+            echo ""
+            echo "================================="
             echo "Fichier : $FILE"
-            echo "Type : $TYPE"
-            echo "=============================="
+            echo "Type    : $TYPE"
+            echo "================================="
+
 
             if [ ! -f "$FILE" ]; then
-              echo "Fichier absent"
+
+              echo "❌ Fichier absent : $FILE"
+
               return
+
             fi
+
+
+            echo "Informations fichier :"
+
+            ls -lh "$FILE"
 
             file "$FILE"
 
-            curl -X POST "${DD_URL}/api/v2/import-scan/" \
+
+
+            echo "Import vers DefectDojo..."
+
+
+
+            curl -v \
+              -X POST "${DD_URL}/api/v2/import-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
               -F "engagement=${DD_ENGAGEMENT}" \
               -F "scan_type=${TYPE}" \
               -F "file=@${FILE}" \
               -F "active=true" \
-              -F "verified=true"
+              -F "deduplication_on_engagement=true"
+
+
+            echo ""
+
           }
 
+
+
+          ####################################
+          # TRIVY SCA
+          ####################################
 
           import_scan \
           "reports/trivy-rapport-complet/trivy-results.json" \
           "Trivy Scan"
 
 
+
+          ####################################
+          # SBOM CYCLONEDX
+          ####################################
+
           import_scan \
           "reports/sbom-cyclonedx/sbom.json" \
           "CycloneDX Scan"
 
+
+
+          ####################################
+          # OWASP ZAP DAST
+          ####################################
 
           import_scan \
           "reports/zap-rapport/zap_report.json" \
           "ZAP Scan"
 
 
-          echo "Import terminé"
+
+          ####################################
+          # SEMGREP SAST
+          ####################################
+
+          import_scan \
+          "reports/semgrep-report/semgrep-report.json" \
+          "Semgrep JSON Report"
+
+
+
+          ####################################
+          # GITLEAKS SECRET SCAN
+          ####################################
+
+          import_scan \
+          "reports/gitleaks-report/gitleaks-report.json" \
+          "Gitleaks Scan"
+
+
+
+          echo ""
+          echo "================================="
+          echo "✅ Import DefectDojo terminé"
+          echo "================================="
