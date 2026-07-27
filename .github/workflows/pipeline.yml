@@ -17,16 +17,16 @@ jobs:
   security-scans:
     name: Scans de sécurité et tests
     uses: ./.github/workflows/_security-scans.yml
-    secrets: inherit
+    #secrets: inherit
 
   build-and-scan:
     name: Build et scan de l'image
     needs: [security-scans]
     uses: ./.github/workflows/_build.yml
-    secrets: inherit
+    #secrets: inherit
 
   deploy:
     name: Déploiement
     needs: [build-and-scan]
     uses: ./.github/workflows/_deploy.yml
-    secrets: inherit
+    #secrets: inherit
