@@ -10,117 +10,72 @@ on:
       DEFECTDOJO_ENGAGEMENT_ID:
         required: true
 
-
 permissions:
   contents: read
   actions: read
 
-
 jobs:
-
   defectdojo:
-
     name: Import des rapports dans DefectDojo
-
     runs-on: ubuntu-latest
 
-
     steps:
-
       - name: Télécharger les artefacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
         with:
           path: reports
 
-
       - name: Vérifier les rapports
-        run: |
-          echo "===== ARBORESCENCE ====="
-          ls -R reports
-
-
+        run: ls -R reports
 
       - name: Import DefectDojo
-
         shell: bash
-
         env:
           DD_URL: ${{ secrets.DEFECTDOJO_URL }}
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
 
-
         run: |
 
-
           import_scan () {
-
             FILE=$1
             TYPE=$2
 
-
-            echo ""
             echo "=============================="
             echo "Fichier : $FILE"
-            echo "Type    : $TYPE"
+            echo "Type : $TYPE"
             echo "=============================="
 
-
             if [ ! -f "$FILE" ]; then
-
-              echo "Fichier absent : $FILE"
-
+              echo "Fichier absent"
               return
-
             fi
 
-
-            echo "Infos fichier:"
             file "$FILE"
-            ls -lh "$FILE"
 
-
-            curl \
-              -X POST "${DD_URL}/api/v2/import-scan/" \
+            curl -X POST "${DD_URL}/api/v2/import-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
               -F "engagement=${DD_ENGAGEMENT}" \
               -F "scan_type=${TYPE}" \
               -F "file=@${FILE}" \
               -F "active=true" \
               -F "verified=true"
-
           }
 
-
-
-          # ===============================
-          # Trivy SCA dépendances
-          # ===============================
 
           import_scan \
           "reports/trivy-rapport-complet/trivy-results.json" \
           "Trivy Scan"
 
 
-
-          # ===============================
-          # SBOM CycloneDX
-          # ===============================
-
           import_scan \
           "reports/sbom-cyclonedx/sbom.json" \
           "CycloneDX Scan"
 
 
-
-          # ===============================
-          # OWASP ZAP DAST
-          # ===============================
-
           import_scan \
-          "reports/zap-rapport/zap_report.xml" \
+          "reports/zap-rapport/zap_report.json" \
           "ZAP Scan"
-
 
 
           echo "Import terminé"
