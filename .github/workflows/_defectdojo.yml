@@ -10,6 +10,7 @@ on:
       DEFECTDOJO_ENGAGEMENT_ID:
         required: true
 
+
 permissions:
   contents: read
   actions: read
@@ -20,128 +21,32 @@ jobs:
   defectdojo:
 
     name: Import des rapports dans DefectDojo
+
     runs-on: ubuntu-latest
 
 
     steps:
 
-
-      ###############################################################
-      # Test connexion DefectDojo
-      ###############################################################
-
-      - name: Test connexion DefectDojo
-        env:
-          DD_URL: ${{ secrets.DEFECTDOJO_URL }}
-
-        run: |
-
-          echo "================================="
-          echo "Test accès DefectDojo"
-          echo "URL : ${DD_URL}"
-          echo "================================="
-
-          curl -I \
-            --connect-timeout 10 \
-            --max-time 30 \
-            "${DD_URL}"
-
-
-
-      ###############################################################
-      # Test API DefectDojo + Token
-      ###############################################################
-
-      - name: Test API DefectDojo
-        env:
-          DD_URL: ${{ secrets.DEFECTDOJO_URL }}
-          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-
-        run: |
-
-          echo "================================="
-          echo "Test API DefectDojo"
-          echo "================================="
-
-
-          curl -v \
-            --connect-timeout 10 \
-            --max-time 30 \
-            "${DD_URL}/api/v2/users/current/" \
-            -H "Authorization: Token ${DD_API_KEY}"
-
-
-
-      ###############################################################
-      # Télécharger les artifacts
-      ###############################################################
-
-      - name: Télécharger tous les artefacts
-
+      - name: Télécharger les artefacts
         uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
-
         with:
-
           path: reports
 
 
-
-      ###############################################################
-      # Vérifier les fichiers
-      ###############################################################
-
-      - name: Vérifier les rapports disponibles
-
+      - name: Vérifier les rapports
         run: |
-
-          echo "================================="
-          echo "Arborescence rapports"
-          echo "================================="
-
+          echo "===== ARBORESCENCE ====="
           ls -R reports
 
 
 
-      ###############################################################
-      # Test engagement DefectDojo
-      ###############################################################
-
-      - name: Vérifier engagement DefectDojo
-
-        env:
-          DD_URL: ${{ secrets.DEFECTDOJO_URL }}
-          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-          DD_ENGAGEMENT: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
-
-        run: |
-
-          echo "================================="
-          echo "Test engagement ID : ${DD_ENGAGEMENT}"
-          echo "================================="
-
-
-          curl -v \
-            --connect-timeout 10 \
-            --max-time 30 \
-            "${DD_URL}/api/v2/engagements/${DD_ENGAGEMENT}/" \
-            -H "Authorization: Token ${DD_API_KEY}"
-
-
-
-      ###############################################################
-      # Import rapports
-      ###############################################################
-
-      - name: Importer les rapports
+      - name: Import DefectDojo
 
         shell: bash
 
         env:
-
           DD_URL: ${{ secrets.DEFECTDOJO_URL }}
-
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-
           DD_ENGAGEMENT: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
 
 
@@ -151,67 +56,51 @@ jobs:
           import_scan () {
 
             FILE=$1
-
             TYPE=$2
 
+
+            echo ""
+            echo "=============================="
+            echo "Fichier : $FILE"
+            echo "Type    : $TYPE"
+            echo "=============================="
 
 
             if [ ! -f "$FILE" ]; then
 
-              echo "⚠️ Rapport absent : $FILE"
+              echo "Fichier absent"
 
               return
 
             fi
 
 
-
-            echo ""
-            echo "========================================="
-            echo "Import de : $FILE"
-            echo "Type      : $TYPE"
-            echo "========================================="
-
+            echo "Infos fichier:"
+            file "$FILE"
+            ls -lh "$FILE"
 
 
             curl -v \
-              --fail \
-              --connect-timeout 10 \
-              --max-time 120 \
               -X POST "${DD_URL}/api/v2/import-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
-              -H "Accept: application/json" \
               -F "engagement=${DD_ENGAGEMENT}" \
               -F "scan_type=${TYPE}" \
               -F "file=@${FILE}" \
               -F "active=true" \
-              -F "verified=true" \
-              -F "close_old_findings=false" \
-              -F "minimum_severity=Info"
-
-
-
-            echo "✅ Import terminé"
+              -F "verified=true"
 
           }
 
 
 
-          ###########################################################
-          # Imports
-          ###########################################################
-
-
           import_scan \
           "reports/trivy-rapport-complet/trivy-results.json" \
-          "Trivy Scan"
-
+          "Trivy"
 
 
           import_scan \
-          "reports/trivy-image-rapport/trivy-image-results.json" \
-          "Trivy Scan"
-
+          "reports/sbom-cyclonedx/sbom.json" \
+          "CycloneDX SBOM"
 
 
           import_scan \
@@ -220,13 +109,4 @@ jobs:
 
 
 
-          import_scan \
-          "reports/sbom-cyclonedx/sbom.json" \
-          "CycloneDX Scan"
-
-
-
-          echo ""
-          echo "================================="
-          echo "Tous les imports terminés"
-          echo "================================="
+          echo "Import terminé"
