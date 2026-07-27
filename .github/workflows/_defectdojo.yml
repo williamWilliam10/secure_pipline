@@ -67,20 +67,10 @@ jobs:
               return
 
             fi
-
-
             echo "Informations fichier :"
-
             ls -lh "$FILE"
-
             file "$FILE"
-
-
-
             echo "Import vers DefectDojo..."
-
-
-
             curl -v \
               -X POST "${DD_URL}/api/v2/import-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
@@ -89,14 +79,9 @@ jobs:
               -F "file=@${FILE}" \
               -F "active=true" \
               -F "deduplication_on_engagement=true"
-
-
             echo ""
 
           }
-
-
-
           ####################################
           # TRIVY SCA
           ####################################
