@@ -18,7 +18,7 @@ jobs:
     name: Scans de sécurité et tests
     uses: ./.github/workflows/_security-scans.yml
     secrets: 
-        SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
   build-and-scan:
     name: Build et scan de l'image
     needs: [security-scans]

@@ -2,7 +2,9 @@ name: Security Scans (reusable)
 
 on:
   workflow_call:
-
+     secrets:
+      SEMGREP_APP_TOKEN:
+        required: true
 permissions:
   contents: read
   issues: write

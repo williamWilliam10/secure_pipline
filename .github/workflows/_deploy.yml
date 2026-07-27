@@ -2,7 +2,18 @@ name: Deploy (reusable)
 
 on:
   workflow_call:
-
+    secrets:
+      RENDER_PRODUCTION_DEPLOY_HOOK:
+        required: true
+      RENDER_STAGING_DEPLOY_HOOK:
+        required: true
+      STAGING_URL:
+        required: true
+permissions:
+  contents: read      # Le pipeline peut SEULEMENT LIRE le code source (pour le cloner et le scanner)
+  issues: write       # Il a le droit d'écrire des commentaires dans les issues si besoin
+  actions: write      # Il a le droit de gérer les actions/artefacts
+  packages: write     # Il a le droit de pousser des images Docker (pour le déploiement)
 jobs:
   deploy-staging:
     name: Déployer en Staging
