@@ -36,7 +36,7 @@ jobs:
 
       - name: Sauvegarder les rapports ZAP
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf88e
         with:
           name: zap-rapport
           path: zap-reports/
