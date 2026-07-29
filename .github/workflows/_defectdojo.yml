@@ -1,4 +1,4 @@
-name: Import Security Reports to DefectDojo
+name: Import Security Reports to DefectDojo (reusable)
 
 on:
   workflow_call:
@@ -15,122 +15,114 @@ permissions:
   actions: read
 
 jobs:
-
   defectdojo:
-
     name: Import des rapports dans DefectDojo
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Télécharger les artefacts
+      - name: Télécharger tous les artifacts
         uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
         with:
           path: reports
 
-
       - name: Vérifier les rapports disponibles
         run: |
           echo "===== ARBORESCENCE DES RAPPORTS ====="
-          ls -R reports || true
+          ls -R reports || echo "Aucun rapport trouvé"
 
-
-      - name: Import DefectDojo
-
+      - name: Import vers DefectDojo (reimport avec fermeture auto)
         shell: bash
-
         env:
           DD_URL: ${{ secrets.DEFECTDOJO_URL }}
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           DD_ENGAGEMENT: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
 
-
         run: |
 
-          import_scan () {
-
-            FILE=$1
-            TYPE=$2
-
+          # Fonction reimport — ferme automatiquement les findings corrigés
+          # test_title stable = DefectDojo retrouve le bon test à chaque run
+          reimport_scan() {
+            FILE="$1"
+            TYPE="$2"
+            TITLE="$3"
 
             echo ""
             echo "================================="
             echo "Fichier : $FILE"
             echo "Type    : $TYPE"
+            echo "Titre   : $TITLE"
             echo "================================="
 
-
             if [ ! -f "$FILE" ]; then
-
-              echo "❌ Fichier absent : $FILE"
-
-              return
-
+              echo "⚠️  Fichier absent, scan ignoré : $FILE"
+              return 0
             fi
-            echo "Informations fichier :"
-            ls -lh "$FILE"
-            file "$FILE"
-            echo "Import vers DefectDojo..."
-            curl -v \
-              -X POST "${DD_URL}/api/v2/import-scan/" \
+
+            echo "Taille fichier : $(ls -lh "$FILE" | awk '{print $5}')"
+
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+              -X POST "${DD_URL}/api/v2/reimport-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
               -F "engagement=${DD_ENGAGEMENT}" \
               -F "scan_type=${TYPE}" \
+              -F "test_title=${TITLE}" \
               -F "file=@${FILE}" \
               -F "active=true" \
-              -F "deduplication_on_engagement=true"
+              -F "verified=false" \
+              -F "close_old_findings=true" \
+              -F "close_old_findings_product_scope=false" \
+              -F "minimum_severity=Low" \
+              -F "deduplication_on_engagement=false")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+            BODY=$(echo "$RESPONSE" | head -1)
+
+            if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
+              echo "✅ Import réussi (HTTP $HTTP_CODE)"
+            else
+              echo "❌ Échec import (HTTP $HTTP_CODE)"
+              echo "Réponse : $BODY"
+              # On ne fait pas exit 1 pour ne pas bloquer les autres imports
+            fi
             echo ""
-
           }
-          ####################################
-          # TRIVY SCA
-          ####################################
 
-          import_scan \
-          "reports/trivy-rapport-complet/trivy-results.json" \
-          "Trivy Scan"
+          # ─── TRIVY SCA ────────────────────────────────────────────
+          reimport_scan \
+            "reports/trivy-rapport-complet/trivy-results.json" \
+            "Trivy Scan" \
+            "Trivy SCA - Dependencies"
 
+          # ─── SBOM CYCLONEDX ───────────────────────────────────────
+          reimport_scan \
+            "reports/sbom-cyclonedx/sbom.json" \
+            "CycloneDX Scan" \
+            "SBOM CycloneDX"
 
+          # ─── TRIVY IMAGE ──────────────────────────────────────────
+          reimport_scan \
+            "reports/trivy-image-rapport/trivy-image-results.json" \
+            "Trivy Scan" \
+            "Trivy Image Scan"
 
-          ####################################
-          # SBOM CYCLONEDX
-          ####################################
+          # ─── OWASP ZAP DAST ───────────────────────────────────────
+          # DefectDojo préfère le XML pour ZAP
+          reimport_scan \
+            "reports/zap-rapport/zap_report.xml" \
+            "ZAP Scan" \
+            "OWASP ZAP DAST - Staging"
 
-          import_scan \
-          "reports/sbom-cyclonedx/sbom.json" \
-          "CycloneDX Scan"
+          # ─── SEMGREP SAST ─────────────────────────────────────────
+          reimport_scan \
+            "reports/semgrep-report/semgrep-report.json" \
+            "Semgrep JSON Report" \
+            "Semgrep SAST"
 
-
-
-          ####################################
-          # OWASP ZAP DAST
-          ####################################
-
-          import_scan \
-          "reports/zap-rapport/zap_report.json" \
-          "ZAP Scan"
-
-
-
-          ####################################
-          # SEMGREP SAST
-          ####################################
-
-          import_scan \
-          "reports/semgrep-report/semgrep-report.json" \
-          "Semgrep JSON Report"
-
-
-
-          ####################################
-          # GITLEAKS SECRET SCAN
-          ####################################
-
-          import_scan \
-          "reports/gitleaks-report/gitleaks-report.json" \
-          "Gitleaks Scan"
-
-
+          # ─── GITLEAKS ─────────────────────────────────────────────
+          reimport_scan \
+            "reports/gitleaks-report/gitleaks-report.json" \
+            "Gitleaks Scan" \
+            "Gitleaks Secret Scan"
 
           echo ""
           echo "================================="

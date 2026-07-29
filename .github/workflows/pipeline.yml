@@ -17,13 +17,16 @@ jobs:
   security-scans:
     name: Scans de sécurité et tests
     uses: ./.github/workflows/_security-scans.yml
-    secrets: 
+    secrets:
       SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-and-scan:
     name: Build et scan de l'image
     needs: [security-scans]
     uses: ./.github/workflows/_build.yml
-  
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     name: Déploiement
@@ -36,6 +39,9 @@ jobs:
 
   defectdojo:
     name: Import vers DefectDojo
+    # Tourne toujours, même si deploy échoue
+    # N'attend PAS le deploy — les scans suffisent
+    if: always()
     needs:
       - security-scans
       - build-and-scan
