@@ -9,7 +9,6 @@ venv/
 env/
 .env
 .env.production
-
 # Fichiers de rapports générés par les scans (ne pas commiter, ils sont en artifacts)
 trivy-results.json
 trivy-image-results.json
