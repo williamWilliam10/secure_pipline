@@ -7,7 +7,9 @@ on:
         required: true
       DEFECTDOJO_API_KEY:
         required: true
-      DEFECTDOJO_ENGAGEMENT_ID:
+      DEFECTDOJO_PRODUCT_NAME:
+        required: true
+      DEFECTDOJO_ENGAGEMENT_NAME:
         required: true
 
 permissions:
@@ -35,7 +37,8 @@ jobs:
         env:
           DD_URL: ${{ secrets.DEFECTDOJO_URL }}
           DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-          DD_ENGAGEMENT: ${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}
+          DD_PRODUCT_NAME: ${{ secrets.DEFECTDOJO_PRODUCT_NAME }}
+          DD_ENGAGEMENT_NAME: ${{ secrets.DEFECTDOJO_ENGAGEMENT_NAME }}
 
         run: |
 
@@ -63,7 +66,8 @@ jobs:
             RESPONSE=$(curl -s -w "\n%{http_code}" \
               -X POST "${DD_URL}/api/v2/reimport-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
-              -F "engagement=${DD_ENGAGEMENT}" \
+              -F "product_name=${DD_PRODUCT_NAME}" \
+              -F "engagement_name=${DD_ENGAGEMENT_NAME}" \
               -F "scan_type=${TYPE}" \
               -F "test_title=${TITLE}" \
               -F "file=@${FILE}" \
