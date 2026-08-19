@@ -39,7 +39,7 @@ jobs:
           chmod -R 777 zap-reports
 
           docker run --rm \
-            -v $(pwd)/zap-reports:/zap/wrk:rw \
+            -v "$(pwd)/zap-reports:/zap/wrk:rw" \
             -t ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t ${{ secrets.STAGING_URL }} \

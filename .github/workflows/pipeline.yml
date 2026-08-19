@@ -26,8 +26,6 @@ jobs:
     name: Build et scan de l'image
     needs: [security-scans]
     uses: ./.github/workflows/_build.yml
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     name: Déploiement

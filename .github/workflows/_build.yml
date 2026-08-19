@@ -2,9 +2,7 @@ name: Build and Scan Image (reusable)
 
 on:
   workflow_call:
-    secrets:
-      GITHUB_TOKEN:
-        required: true
+
 permissions:
   contents: read
   packages: write
