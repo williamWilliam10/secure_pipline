@@ -1,6 +1,7 @@
 # Secure Pipeline ,Pipeline CI/CD sécurisé
 
 ![Security Pipeline](https://github.com/williamWilliam10/secure_pipline/actions/workflows/pipeline.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 Pipeline CI/CD complet intégrant la sécurité à chaque étape (DevSecOps), depuis la détection de secrets jusqu'au déploiement en production, en passant par l'analyse statique du code, l'analyse des dépendances, le scan de l'image Docker et un test dynamique de l'application déployée.
 
@@ -8,7 +9,7 @@ Ce projet a été construit comme labo d'apprentissage pratique pour comprendre 
 
 ## Architecture
 
-![Architecture du pipeline](./architecture.svg)
+![Architecture du pipeline](./architecture.jpeg)
 
 Le pipeline se déclenche à la fois sur un push direct vers `main` et sur toute pull request visant `main` ,une PR ne peut donc pas être mergée sans que l'ensemble des contrôles de sécurité ait été exécuté.
 
@@ -104,6 +105,10 @@ pip install pytest pytest-cov
 pytest test_app.py -v --cov=app
 EXTERNAL_API_KEY="valeur-de-test" python app.py
 ```
+
+## Licence
+
+Ce projet est sous licence [MIT](./LICENSE).
 
 ## Auteur
 
