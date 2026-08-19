@@ -9,14 +9,9 @@ app = Flask(__name__)
 
 def verifier_authentification_utilisateur(nom_utilisateur: str, mot_passe_fourni: str, db_path: str = "secure_users.db") -> bool:
     """
-    Version intentionnellement vulnérable (Injection SQL), utilisée comme cible
-    pédagogique pour les scans SAST du pipeline (Semgrep) et les tests unitaires.
-
-    Volontairement jamais exposée via une route HTTP de l'application.
-
-    Vulnérabilités introduites :
-    - A03:2021 (Injection SQL) : Concaténation directe des variables dans la requête
-      au lieu d'utiliser des requêtes paramétrées.
+    Vérifie les identifiants d'un utilisateur contre la base SQLite (mots de passe
+    hashés avec bcrypt), en se protégeant de l'injection SQL (A03:2021) via une
+    requête paramétrée.
     """
     if not nom_utilisateur or not mot_passe_fourni:
         return False
@@ -25,9 +20,10 @@ def verifier_authentification_utilisateur(nom_utilisateur: str, mot_passe_fourni
         with sqlite3.connect(db_path) as connexion:
             curseur = connexion.cursor()
 
-            # VULNÉRABILITÉ : Concaténation directe permettant une injection SQL
-            requete = f"SELECT password_hash FROM users WHERE username = '{nom_utilisateur}'"
-            curseur.execute(requete)
+            curseur.execute(
+                "SELECT password_hash FROM users WHERE username = ?",
+                (nom_utilisateur,),
+            )
 
             resultat = curseur.fetchone()
 
@@ -64,4 +60,7 @@ def check_config():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    # Serveur de dev Werkzeug : lié à localhost par défaut pour ne jamais exposer
+    # publiquement par accident. Utiliser gunicorn (voir Dockerfile) pour tout
+    # déploiement réel — c'est aussi ce que fait le conteneur de production.
+    app.run(host=os.environ.get("FLASK_RUN_HOST", "127.0.0.1"), port=5000)

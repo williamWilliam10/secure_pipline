@@ -2,6 +2,7 @@ import unittest
 import sqlite3
 import bcrypt
 import os
+import secrets
 from app import app, verifier_authentification_utilisateur
 
 
@@ -25,7 +26,8 @@ class TestAuthenticationSecurity(unittest.TestCase):
             
             # Génération d'un vrai hash bcrypt pour le test
             self.test_user = "alice"
-            self.test_password = "SecurePassword123!"
+            self.test_password = os.environ.get("TEST_USER_PASSWORD") or secrets.token_urlsafe(16)
+
             hashed_pw = bcrypt.hashpw(self.test_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
             cursor.execute(
