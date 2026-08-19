@@ -11,8 +11,7 @@ COPY requirements.txt .
 # 2. Mise à jour des paquets système (corrige les CVE connues) PUIS installation des dépendances Python
 RUN apt-get update && apt-get upgrade -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir gunicorn
+    pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 
@@ -23,6 +22,10 @@ USER appuser
 
 EXPOSE 5000
 
-# 4. On utilise Gunicorn au lieu de "python app.py"
+# 4. Healthcheck sur l'endpoint applicatif dédié
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=2)" || exit 1
+
+# 5. On utilise Gunicorn au lieu de "python app.py"
 # C'est ici qu'on lie l'application à 0.0.0.0 pour que Docker expose le port.
 CMD ["gunicorn", "--workers=4", "--bind=0.0.0.0:5000", "app:app"]

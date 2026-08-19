@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Télécharger tous les artifacts
-        uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
+        uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317 # main, post-v8.0.1 (2026-03-12)
         with:
           path: reports
 
@@ -104,6 +104,12 @@ jobs:
             "reports/trivy-image-rapport/trivy-image-results.json" \
             "Trivy Scan" \
             "Trivy Image Scan"
+
+          # ─── TRIVY IAC ────────────────────────────────────────────
+          reimport_scan \
+            "reports/trivy-iac-rapport/trivy-iac-results.json" \
+            "Trivy Scan" \
+            "Trivy IaC Scan"
 
           # ─── OWASP ZAP DAST ───────────────────────────────────────
           # DefectDojo préfère le XML pour ZAP

@@ -58,11 +58,24 @@ jobs:
 
       - name: Sauvegarder les rapports ZAP
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: zap-rapport
           path: zap-reports/
           retention-days: 7
+
+      - name: Vérifier les alertes bloquantes (High risk)
+        run: |
+          HIGH_COUNT=$(jq '[.site[]?.alerts[]? | select(.riskcode == "3")] | length' zap-reports/zap_report.json)
+
+          echo "Nombre d'alertes High trouvées : $HIGH_COUNT"
+
+          if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "❌ Pipeline bloqué : $HIGH_COUNT alerte(s) High détectée(s) par ZAP"
+            exit 1
+          else
+            echo "✅ Aucune alerte High, pipeline continue"
+          fi
 
   deploy-production:
     name: Déployer en Production

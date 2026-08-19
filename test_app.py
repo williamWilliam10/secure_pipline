@@ -2,9 +2,8 @@ import unittest
 import sqlite3
 import bcrypt
 import os
-from app import verifier_authentification_utilisateur
+from app import app, verifier_authentification_utilisateur
 
-# Importez votre fonction depuis votre fichier principal (ex: from main import verifier_authentification_utilisateur)
 
 class TestAuthenticationSecurity(unittest.TestCase):
     
@@ -60,6 +59,34 @@ class TestAuthenticationSecurity(unittest.TestCase):
         self.assertFalse(verifier_authentification_utilisateur("", self.test_password, self.DB_TEST_PATH))
         self.assertFalse(verifier_authentification_utilisateur(self.test_user, "", self.DB_TEST_PATH))
         self.assertFalse(verifier_authentification_utilisateur("", "", self.DB_TEST_PATH))
+
+
+class TestEndpoints(unittest.TestCase):
+
+    def setUp(self):
+        self.client = app.test_client()
+
+    def test_health(self):
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {"status": "ok"})
+
+    def test_check_config_sans_variable(self):
+        os.environ.pop("EXTERNAL_API_KEY", None)
+        response = self.client.get("/check-config")
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(response.get_json()["external_api_key_configured"])
+
+    def test_check_config_avec_variable(self):
+        os.environ["EXTERNAL_API_KEY"] = "valeur-de-test"
+        try:
+            response = self.client.get("/check-config")
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.get_json()["external_api_key_configured"])
+            self.assertNotIn("valeur-de-test", response.get_data(as_text=True))
+        finally:
+            os.environ.pop("EXTERNAL_API_KEY", None)
+
 
 if __name__ == "__main__":
     unittest.main()

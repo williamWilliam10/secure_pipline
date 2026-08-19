@@ -19,12 +19,12 @@ jobs:
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v5
         with:
           fetch-depth: 0
 
       - name: Lancer Gitleaks
-        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -39,7 +39,7 @@ jobs:
 
       - name: Sauvegarder rapport Gitleaks
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gitleaks-report
           path: gitleaks-report.json
@@ -57,18 +57,19 @@ jobs:
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v5
 
-      - name: Lancer Semgrep Scan
+      - name: Lancer Semgrep Scan (politique Semgrep AppSec Platform)
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
-          semgrep scan \
-          --config auto \
+          semgrep ci \
           --json \
           --output semgrep-report.json
 
       - name: Sauvegarder rapport Semgrep
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: semgrep-report
           path: semgrep-report.json
@@ -81,10 +82,10 @@ jobs:
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v5
 
       - name: Trivy - Scan des dépendances
-        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8
+        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8 # main, post-v0.36.0 (2026-07-02)
         with:
           scan-type: fs
           scan-ref: .
@@ -95,14 +96,14 @@ jobs:
 
       - name: Sauvegarder rapport Trivy
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-rapport-complet
           path: trivy-results.json
           retention-days: 7
 
       - name: Trivy - Génération SBOM CycloneDX
-        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8
+        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8 # main, post-v0.36.0 (2026-07-02)
         with:
           scan-type: fs
           scan-ref: .
@@ -111,7 +112,7 @@ jobs:
 
       - name: Sauvegarder SBOM CycloneDX
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-cyclonedx
           path: sbom.json
@@ -131,18 +132,58 @@ jobs:
           fi
 
 
+  iac-scan:
+    name: Trivy - Analyse de configuration (IaC)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v5
+
+      - name: Trivy - Scan de configuration (Dockerfile)
+        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8 # main, post-v0.36.0 (2026-07-02)
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          exit-code: 0
+          format: json
+          output: trivy-iac-results.json
+
+      - name: Sauvegarder rapport Trivy IaC
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-iac-rapport
+          path: trivy-iac-results.json
+          retention-days: 7
+
+      - name: Vérifier vulnérabilités bloquantes
+        run: |
+          CRITICAL_HIGH_COUNT=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy-iac-results.json)
+
+          echo "Nombre de misconfigurations Critical/High trouvées : $CRITICAL_HIGH_COUNT"
+
+          if [ "$CRITICAL_HIGH_COUNT" -gt 0 ]; then
+            echo "❌ Pipeline bloqué : $CRITICAL_HIGH_COUNT misconfiguration(s) Critical/High détectée(s)"
+            exit 1
+          else
+            echo "✅ Aucune misconfiguration Critical/High, pipeline continue"
+          fi
+
+
   unit-tests:
     name: Pytest - Tests unitaires
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v5
 
       - name: Installer Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Installer les dépendances
         run: |
@@ -158,7 +199,7 @@ jobs:
 
       - name: Sauvegarder rapport couverture
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-report
           path: coverage.xml
