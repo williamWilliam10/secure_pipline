@@ -9,9 +9,15 @@ WORKDIR /app
 COPY requirements.txt .
 
 # 2. Mise à jour des paquets système (corrige les CVE connues) PUIS installation des dépendances Python
+# pip embarque en interne (pip/_vendor) une copie figée de setuptools et msgpack contenant
+# des CVE connues (CVE-2025-47273, CVE-2026-59890, GHSA-6v7p-g79w-8964), non corrigeables via
+# `pip install --upgrade` puisqu'elles sont vendorisées dans pip lui-même, pas installées à part.
+# Comme pip n'est utile qu'au build (jamais à l'exécution par gunicorn), on le désinstalle une
+# fois les dépendances posées : ça élimine ces CVE et réduit la surface de l'image finale.
 RUN apt-get update && apt-get upgrade -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall --yes pip setuptools wheel
 
 COPY app.py .
 
