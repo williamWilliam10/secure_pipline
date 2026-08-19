@@ -85,6 +85,41 @@ Une fois les scans terminés (`if: always()`, indépendamment du succès du dép
 - L'attente de fin de déploiement Render avant le scan ZAP se fait par un `sleep` fixe plutôt que par un polling actif du statut du déploiement.
 - Les actions GitHub sont épinglées sur des commits résolus manuellement plutôt que via un outil automatisé (ex. Dependabot/Renovate) qui maintiendrait ces pins à jour et vérifierait leur intégrité.
 
+## Réutiliser ce pipeline pour ton propre projet
+
+Les 4 workflows réutilisables (`_security-scans.yml`, `_build.yml`, `_deploy.yml`, `_defectdojo.yml`) sont référencés en chemin relatif (`./.github/workflows/...`) depuis [pipeline.yml](.github/workflows/pipeline.yml) : ils fonctionnent tels quels dans n'importe quel clone ou fork, sans réécriture. Ce qui doit changer, c'est uniquement la configuration côté comptes externes.
+
+### 1. Secrets GitHub à créer (`Settings → Secrets and variables → Actions`)
+
+| Secret | Sert à | Où l'obtenir |
+|---|---|---|
+| `SEMGREP_APP_TOKEN` | Authentifier `semgrep ci` auprès de la plateforme Semgrep AppSec | Compte sur [semgrep.dev](https://semgrep.dev) → Settings → Tokens |
+| `RENDER_STAGING_DEPLOY_HOOK` | Déclencher le déploiement staging | Service Render (mode "Existing Image") → Settings → Deploy Hook |
+| `RENDER_PRODUCTION_DEPLOY_HOOK` | Déclencher le déploiement production | Idem, sur le service production |
+| `STAGING_URL` | Cible du scan ZAP | URL publique du service staging |
+| `DEFECTDOJO_URL` | Base API de l'instance DefectDojo | URL de ton instance DefectDojo (auto-hébergée ou cloud) |
+| `DEFECTDOJO_API_KEY` | Authentification API | DefectDojo → ton profil utilisateur → API Key |
+| `DEFECTDOJO_PRODUCT_NAME` | Produit cible du réimport | Nom exact du Produit DefectDojo (sensible à la casse) |
+| `DEFECTDOJO_ENGAGEMENT_NAME` | Engagement cible du réimport | Nom exact de l'Engagement dans ce Produit |
+
+`GITHUB_TOKEN` n'a rien à configurer : GitHub Actions le génère automatiquement pour chaque job, avec les permissions déclarées dans chaque fichier `permissions:`.
+
+### 2. Ce qui vit hors du repo et ne se clone pas
+
+- **La règle Semgrep personnalisée et sa politique de blocage** (`hardcoded-password-assignment`, sévérité+confiance élevées) sont configurées sur la plateforme Semgrep AppSec, pas dans un fichier du repo. Il faut les recréer sur ton propre compte si tu veux les conserver — sans ça, `semgrep ci` tournera quand même (règles publiques du registre), simplement sans cette règle custom.
+- **Le Produit et l'Engagement DefectDojo** doivent exister avant le premier run (ou laisser `auto_create_context=true` les créer automatiquement au premier import).
+
+### 3. Ce qu'il faut adapter à ton application
+
+- [Dockerfile](Dockerfile) : image de base, dépendances système, commande de démarrage — le pipeline ne suppose rien de spécifique à Flask, juste une image qui écoute sur un port HTTP.
+- [requirements.txt](requirements.txt) et le code applicatif ([app.py](app.py)) : à remplacer par les tiens.
+- Un endpoint de liveness du type `/health` est attendu par le `HEALTHCHECK` du Dockerfile — garde ce pattern ou adapte-le.
+- Les seuils de blocage (`CRITICAL,HIGH`, alertes ZAP `High`, etc.) sont volontairement explicites dans chaque `run:` plutôt que cachés dans un outil tiers — à ajuster directement dans les fichiers `.github/workflows/*.yml` selon ta politique de risque.
+
+### 4. À vérifier une fois les secrets en place
+
+- Que les checks du pipeline sont bien **requis** dans la protection de branche de `main` (`Settings → Branches`) — sans ça, un push ou une PR peut contourner les contrôles même si le pipeline échoue.
+
 ## Lancer le projet en local
 
 ```bash
