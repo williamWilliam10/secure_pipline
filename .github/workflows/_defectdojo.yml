@@ -68,6 +68,7 @@ jobs:
               -H "Authorization: Token ${DD_API_KEY}" \
               -F "product_name=${DD_PRODUCT_NAME}" \
               -F "engagement_name=${DD_ENGAGEMENT_NAME}" \
+              -F "auto_create_context=true" \
               -F "scan_type=${TYPE}" \
               -F "test_title=${TITLE}" \
               -F "file=@${FILE}" \
