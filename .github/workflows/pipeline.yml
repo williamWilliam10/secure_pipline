@@ -12,15 +12,14 @@ permissions:
   issues: write
   actions: write
   packages: write
+  id-token: write # requis pour l'auth OIDC GitHub -> Vault (migration progressive des secrets)
 
 jobs:
   security-scans:
     name: Scans de sécurité et tests
     uses: ./.github/workflows/_security-scans.yml
     secrets:
-      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-      
-     
+      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
 
   build-and-scan:
     name: Build et scan de l'image

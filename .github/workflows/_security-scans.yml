@@ -3,7 +3,7 @@ name: Security Scans (reusable)
 on:
   workflow_call:
     secrets:
-      SEMGREP_APP_TOKEN:
+      VAULT_ADDR:
         required: true
 
 permissions:
@@ -55,13 +55,23 @@ jobs:
 
     if: github.actor != 'dependabot[bot]'
 
+    permissions:
+      contents: read
+      id-token: write # requis pour l'auth OIDC GitHub -> Vault
+
     steps:
       - name: Checkout du code
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v5
 
+      - name: Récupérer SEMGREP_APP_TOKEN depuis Vault (OIDC, sans credential statique)
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          method: jwt
+          url: ${{ secrets.VAULT_ADDR }}
+          role: secure-pipeline-ci
+          secrets: secret/data/secure-pipeline/semgrep SEMGREP_APP_TOKEN
+
       - name: Lancer Semgrep Scan (politique Semgrep AppSec Platform)
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
           semgrep ci \
           --json \
