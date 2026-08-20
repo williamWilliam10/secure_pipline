@@ -3,13 +3,7 @@ name: Import Security Reports to DefectDojo (reusable)
 on:
   workflow_call:
     secrets:
-      DEFECTDOJO_URL:
-        required: true
-      DEFECTDOJO_API_KEY:
-        required: true
-      DEFECTDOJO_PRODUCT_NAME:
-        required: true
-      DEFECTDOJO_ENGAGEMENT_NAME:
+      VAULT_ADDR:
         required: true
 
 permissions:
@@ -20,6 +14,10 @@ jobs:
   defectdojo:
     name: Import des rapports dans DefectDojo
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      id-token: write # requis pour l'auth OIDC GitHub -> Vault
 
     steps:
       - name: Télécharger tous les artifacts
@@ -32,14 +30,20 @@ jobs:
           echo "===== ARBORESCENCE DES RAPPORTS ====="
           ls -R reports || echo "Aucun rapport trouvé"
 
+      - name: Récupérer les identifiants DefectDojo depuis Vault
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          method: jwt
+          url: ${{ secrets.VAULT_ADDR }}
+          role: secure-pipeline-ci
+          secrets: |
+            secret/data/secure-pipeline/defectdojo DEFECTDOJO_URL | DD_URL
+            secret/data/secure-pipeline/defectdojo DEFECTDOJO_API_KEY | DD_API_KEY
+            secret/data/secure-pipeline/defectdojo DEFECTDOJO_PRODUCT_NAME | DD_PRODUCT_NAME
+            secret/data/secure-pipeline/defectdojo DEFECTDOJO_ENGAGEMENT_NAME | DD_ENGAGEMENT_NAME
+
       - name: Import vers DefectDojo (reimport avec fermeture auto)
         shell: bash
-        env:
-          DD_URL: ${{ secrets.DEFECTDOJO_URL }}
-          DD_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-          DD_PRODUCT_NAME: ${{ secrets.DEFECTDOJO_PRODUCT_NAME }}
-          DD_ENGAGEMENT_NAME: ${{ secrets.DEFECTDOJO_ENGAGEMENT_NAME }}
-
         run: |
 
           # Fonction reimport  ferme automatiquement les findings corrigés

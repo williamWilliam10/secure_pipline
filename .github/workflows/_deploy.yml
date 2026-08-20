@@ -3,9 +3,7 @@ name: Deploy (reusable)
 on:
   workflow_call:
     secrets:
-      RENDER_PRODUCTION_DEPLOY_HOOK:
-        required: true
-      RENDER_STAGING_DEPLOY_HOOK:
+      VAULT_ADDR:
         required: true
       STAGING_URL:
         required: true
@@ -20,9 +18,20 @@ jobs:
   deploy-staging:
     name: Déployer en Staging
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # requis pour l'auth OIDC GitHub -> Vault
     steps:
+      - name: Récupérer RENDER_STAGING_DEPLOY_HOOK depuis Vault
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          method: jwt
+          url: ${{ secrets.VAULT_ADDR }}
+          role: secure-pipeline-ci
+          secrets: secret/data/secure-pipeline/render RENDER_STAGING_DEPLOY_HOOK
+
       - name: Déclencher le déploiement Staging
-        run: curl -X POST "${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}"
+        run: curl -X POST "$RENDER_STAGING_DEPLOY_HOOK"
 
       - name: Attendre la fin du déploiement
         run: sleep 60
@@ -81,6 +90,17 @@ jobs:
     name: Déployer en Production
     needs: [dast-scan-staging]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # requis pour l'auth OIDC GitHub -> Vault
     steps:
+      - name: Récupérer RENDER_PRODUCTION_DEPLOY_HOOK depuis Vault
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          method: jwt
+          url: ${{ secrets.VAULT_ADDR }}
+          role: secure-pipeline-ci
+          secrets: secret/data/secure-pipeline/render RENDER_PRODUCTION_DEPLOY_HOOK
+
       - name: Déclencher le déploiement Production
-        run: curl -X POST "${{ secrets.RENDER_PRODUCTION_DEPLOY_HOOK }}"
+        run: curl -X POST "$RENDER_PRODUCTION_DEPLOY_HOOK"

@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   packages: read
+  id-token: write # requis pour l'auth OIDC GitHub -> Vault
 
 jobs:
   scan-production-image:
@@ -63,7 +64,4 @@ jobs:
     needs: scan-production-image
     uses: ./.github/workflows/_defectdojo.yml
     secrets:
-      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
-      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-      DEFECTDOJO_PRODUCT_NAME: ${{ secrets.DEFECTDOJO_PRODUCT_NAME }}
-      DEFECTDOJO_ENGAGEMENT_NAME: ${{ secrets.DEFECTDOJO_ENGAGEMENT_NAME }}
+      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}

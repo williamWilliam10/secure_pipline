@@ -31,8 +31,7 @@ jobs:
     needs: [build-and-scan]
     uses: ./.github/workflows/_deploy.yml
     secrets:
-      RENDER_PRODUCTION_DEPLOY_HOOK: ${{ secrets.RENDER_PRODUCTION_DEPLOY_HOOK }}
-      RENDER_STAGING_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}
+      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
       STAGING_URL: ${{ secrets.STAGING_URL }}
 
   defectdojo:
@@ -46,7 +45,4 @@ jobs:
       - deploy
     uses: ./.github/workflows/_defectdojo.yml
     secrets:
-      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
-      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-      DEFECTDOJO_PRODUCT_NAME: ${{ secrets.DEFECTDOJO_PRODUCT_NAME }}
-      DEFECTDOJO_ENGAGEMENT_NAME: ${{ secrets.DEFECTDOJO_ENGAGEMENT_NAME }}
+      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
