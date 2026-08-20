@@ -69,6 +69,10 @@ Déclenché uniquement après le succès du test ZAP, garantissant qu'aucune ver
 
 Une fois les scans terminés (`if: always()`, indépendamment du succès du déploiement), chaque rapport est réimporté (`reimport-scan`) dans un engagement DefectDojo dédié, avec fermeture automatique des findings corrigés depuis le run précédent ,ce job ne bloque jamais le pipeline lui-même, il ne fait qu'assurer la traçabilité et le suivi de remédiation dans le temps.
 
+### 8. Scan planifié de l'image en production
+
+Indépendamment du pipeline principal, [scheduled-image-scan.yml](.github/workflows/scheduled-image-scan.yml) rescanne chaque jour (cron) l'image `:latest` réellement poussée sur GHCR avec Trivy, pour détecter les CVE publiées *après* le dernier build sur des paquets qui n'ont pas bougé côté code ,une image jamais reconstruite ne revoit jamais un scan sans ça. Le rapport est réimporté dans le même test DefectDojo que le scan d'image du pipeline principal, et le job échoue (visible dans l'onglet Actions) en cas de Critical/High. Volontairement limité à l'image ,`requirements.txt` est déjà couvert par les alertes Dependabot natives de GitHub, pas besoin de dupliquer ce scan sur un cron.
+
 ## Décisions et compromis techniques
 
 - **Parallélisation des scans les plus rapides** plutôt qu'un enchaînement séquentiel strict, pour réduire le temps de feedback développeur sans sacrifier la sécurité (l'étape de build attend leur réussite complète).

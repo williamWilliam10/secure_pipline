@@ -1,0 +1,69 @@
+name: Scan planifié de l'image en production
+
+on:
+  schedule:
+    # Tous les jours à 6h00 UTC — indépendant des push, pour détecter les CVE
+    # publiées après coup sur des paquets déjà présents dans l'image déployée.
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  scan-production-image:
+    name: Trivy - Scan de l'image en production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connexion à GitHub Container Registry
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Préparer le nom de l'image en minuscule
+        id: image-name
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Trivy - Scan de l'image déployée (tag latest)
+        uses: aquasecurity/trivy-action@c07df6fec6fa692e6fd1200d50aaa1fdd66f03c8 # main, post-v0.36.0 (2026-07-02)
+        with:
+          image-ref: ghcr.io/${{ steps.image-name.outputs.name }}:latest
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          exit-code: 0
+          format: json
+          output: trivy-image-results.json
+          ignore-unfixed: true
+
+      - name: Sauvegarder le rapport
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-image-rapport
+          path: trivy-image-results.json
+          retention-days: 7
+
+      - name: Vérifier les vulnérabilités bloquantes
+        run: |
+          CRITICAL_HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy-image-results.json)
+
+          echo "Critical/High trouvées sur l'image en production : $CRITICAL_HIGH_COUNT"
+
+          if [ "$CRITICAL_HIGH_COUNT" -gt 0 ]; then
+            echo "❌ Nouvelle(s) vulnérabilité(s) Critical/High détectée(s) sur l'image en production"
+            exit 1
+          fi
+
+  defectdojo:
+    name: Import vers DefectDojo
+    if: always()
+    needs: scan-production-image
+    uses: ./.github/workflows/_defectdojo.yml
+    secrets:
+      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
+      DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+      DEFECTDOJO_PRODUCT_NAME: ${{ secrets.DEFECTDOJO_PRODUCT_NAME }}
+      DEFECTDOJO_ENGAGEMENT_NAME: ${{ secrets.DEFECTDOJO_ENGAGEMENT_NAME }}
