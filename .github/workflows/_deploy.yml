@@ -5,8 +5,6 @@ on:
     secrets:
       VAULT_ADDR:
         required: true
-      STAGING_URL:
-        required: true
 
 permissions:
   contents: read
@@ -40,7 +38,18 @@ jobs:
     name: OWASP ZAP - Test sur Staging
     needs: [deploy-staging]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # requis pour l'auth OIDC GitHub -> Vault
     steps:
+      - name: Récupérer STAGING_URL depuis Vault
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          method: jwt
+          url: ${{ secrets.VAULT_ADDR }}
+          role: secure-pipeline-ci
+          secrets: secret/data/secure-pipeline/render STAGING_URL
+
       - name: Lancer le scan ZAP via Docker
         continue-on-error: true
         run: |
@@ -51,7 +60,7 @@ jobs:
             -v "$(pwd)/zap-reports:/zap/wrk:rw" \
             -t ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
-            -t ${{ secrets.STAGING_URL }} \
+            -t "$STAGING_URL" \
             -x zap_report.xml \
             -J zap_report.json \
             -w zap_report.md \

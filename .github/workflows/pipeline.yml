@@ -32,7 +32,6 @@ jobs:
     uses: ./.github/workflows/_deploy.yml
     secrets:
       VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
-      STAGING_URL: ${{ secrets.STAGING_URL }}
 
   defectdojo:
     name: Import vers DefectDojo
