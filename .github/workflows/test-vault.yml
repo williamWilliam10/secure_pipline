@@ -1,0 +1,30 @@
+name: Test - Authentification Vault via OIDC
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-vault:
+    name: Récupérer un secret de test depuis Vault
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authentification OIDC et lecture du secret de test
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          method: jwt
+          url: ${{ secrets.VAULT_ADDR }}
+          role: secure-pipeline-ci
+          secrets: secret/data/secure-pipeline/test hello
+
+      - name: Vérifier que le secret a bien été récupéré
+        run: |
+          if [ -n "${{ env.HELLO }}" ]; then
+            echo "✅ Secret récupéré depuis Vault avec succès (trust OIDC GitHub↔Vault fonctionnel)"
+          else
+            echo "❌ Secret vide ou non récupéré"
+            exit 1
+          fi
