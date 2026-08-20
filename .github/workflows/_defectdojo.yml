@@ -63,7 +63,11 @@ jobs:
 
             echo "Taille fichier : $(ls -lh "$FILE" | awk '{print $5}')"
 
+            # Le `|| printf ...` évite qu'une connexion impossible (DefectDojo injoignable)
+            # ne tue le script entier via `set -e` et ne saute silencieusement les rapports
+            # suivants ; --connect-timeout/--max-time : échoue vite plutôt que de bloquer le job.
             RESPONSE=$(curl -s -w "\n%{http_code}" \
+              --connect-timeout 10 --max-time 30 \
               -X POST "${DD_URL}/api/v2/reimport-scan/" \
               -H "Authorization: Token ${DD_API_KEY}" \
               -F "product_name=${DD_PRODUCT_NAME}" \
@@ -77,7 +81,7 @@ jobs:
               -F "close_old_findings=true" \
               -F "close_old_findings_product_scope=false" \
               -F "minimum_severity=Low" \
-              -F "deduplication_on_engagement=false")
+              -F "deduplication_on_engagement=false" || printf '\nCURL_CONNECTION_FAILED')
 
             HTTP_CODE=$(echo "$RESPONSE" | tail -1)
             BODY=$(echo "$RESPONSE" | head -1)
