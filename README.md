@@ -93,7 +93,7 @@ Indépendamment du pipeline principal, [scheduled-image-scan.yml](.github/workfl
 
 Les 4 workflows réutilisables (`_security-scans.yml`, `_build.yml`, `_deploy.yml`, `_defectdojo.yml`) sont référencés en chemin relatif (`./.github/workflows/...`) depuis [pipeline.yml](.github/workflows/pipeline.yml). Deux façons de les réutiliser :
 
-### Option A — Sans cloner, en référence directe cross-repo
+### Option A  Sans cloner, en référence directe cross-repo
 
 GitHub Actions permet d'appeler un workflow réutilisable d'un **autre dépôt public** directement, sans rien copier. Depuis le `pipeline.yml` de ton propre projet :
 
@@ -108,7 +108,7 @@ permissions:
   contents: read
   issues: write
   actions: write
-  packages: write   # requis par _build.yml (push GHCR) — voir note ci-dessous
+  packages: write   # requis par _build.yml (push GHCR)  voir note ci-dessous
 
 jobs:
   security-scans:
@@ -121,11 +121,11 @@ jobs:
     uses: williamWilliam10/secure_pipline/.github/workflows/_build.yml@v1
 ```
 
-**Piège le plus probable** : les permissions effectives d'un job appelant un workflow réutilisable sont l'**intersection** entre ce que le workflow appelé déclare et ce que *ton* workflow appelant déclare en haut de fichier — pas juste ce que le fichier appelé demande. Si ton `permissions:` top-level n'inclut pas `packages: write`, le push vers GHCR échouera avec un 403 même si `_build.yml` déclare bien cette permission de son côté. Le bloc `permissions:` ci-dessus reproduit exactement celui du [pipeline.yml](.github/workflows/pipeline.yml) de ce repo.
+**Piège le plus probable** : les permissions effectives d'un job appelant un workflow réutilisable sont l'**intersection** entre ce que le workflow appelé déclare et ce que *ton* workflow appelant déclare en haut de fichier  pas juste ce que le fichier appelé demande. Si ton `permissions:` top-level n'inclut pas `packages: write`, le push vers GHCR échouera avec un 403 même si `_build.yml` déclare bien cette permission de son côté. Le bloc `permissions:` ci-dessus reproduit exactement celui du [pipeline.yml](.github/workflows/pipeline.yml) de ce repo.
 
 Le tag `@v1` est mobile : je le redéplacerai sur les futurs correctifs non cassants. Pour un usage figé et auditable (même logique que l'épinglage par SHA des Actions tierces, voir plus haut), référence plutôt le SHA exact d'un commit taggé `v1`.
 
-### Option B — En clonant/forkant pour adapter le code applicatif
+### Option B  En clonant/forkant pour adapter le code applicatif
 
 Si tu veux aussi repartir de l'app de démo (Dockerfile, tests, structure) plutôt que juste des workflows, clone le repo. Dans ce cas :
 
@@ -146,19 +146,19 @@ Si tu veux aussi repartir de l'app de démo (Dockerfile, tests, structure) plut�
 
 #### 2. Ce qui vit hors du repo et ne se clone pas
 
-- **La règle Semgrep personnalisée et sa politique de blocage** (`hardcoded-password-assignment`, sévérité+confiance élevées) sont configurées sur la plateforme Semgrep AppSec, pas dans un fichier du repo. Il faut les recréer sur ton propre compte si tu veux les conserver — sans ça, `semgrep ci` tournera quand même (règles publiques du registre), simplement sans cette règle custom.
+- **La règle Semgrep personnalisée et sa politique de blocage** (`hardcoded-password-assignment`, sévérité+confiance élevées) sont configurées sur la plateforme Semgrep AppSec, pas dans un fichier du repo. Il faut les recréer sur ton propre compte si tu veux les conserver  sans ça, `semgrep ci` tournera quand même (règles publiques du registre), simplement sans cette règle custom.
 - **Le Produit et l'Engagement DefectDojo** doivent exister avant le premier run (ou laisser `auto_create_context=true` les créer automatiquement au premier import).
 
 #### 3. Ce qu'il faut adapter à ton application
 
-- [Dockerfile](Dockerfile) : image de base, dépendances système, commande de démarrage — le pipeline ne suppose rien de spécifique à Flask, juste une image qui écoute sur un port HTTP.
+- [Dockerfile](Dockerfile) : image de base, dépendances système, commande de démarrage  le pipeline ne suppose rien de spécifique à Flask, juste une image qui écoute sur un port HTTP.
 - [requirements.txt](requirements.txt) et le code applicatif ([app.py](app.py)) : à remplacer par les tiens.
-- Un endpoint de liveness du type `/health` est attendu par le `HEALTHCHECK` du Dockerfile — garde ce pattern ou adapte-le.
-- Les seuils de blocage (`CRITICAL,HIGH`, alertes ZAP `High`, etc.) sont volontairement explicites dans chaque `run:` plutôt que cachés dans un outil tiers — à ajuster directement dans les fichiers `.github/workflows/*.yml` selon ta politique de risque.
+- Un endpoint de liveness du type `/health` est attendu par le `HEALTHCHECK` du Dockerfile  garde ce pattern ou adapte-le.
+- Les seuils de blocage (`CRITICAL,HIGH`, alertes ZAP `High`, etc.) sont volontairement explicites dans chaque `run:` plutôt que cachés dans un outil tiers  à ajuster directement dans les fichiers `.github/workflows/*.yml` selon ta politique de risque.
 
 #### 4. À vérifier une fois les secrets en place
 
-- Que les checks du pipeline sont bien **requis** dans la protection de branche de `main` (`Settings → Branches`) — sans ça, un push ou une PR peut contourner les contrôles même si le pipeline échoue.
+- Que les checks du pipeline sont bien **requis** dans la protection de branche de `main` (`Settings → Branches`)  sans ça, un push ou une PR peut contourner les contrôles même si le pipeline échoue.
 
 ## Lancer le projet en local
 

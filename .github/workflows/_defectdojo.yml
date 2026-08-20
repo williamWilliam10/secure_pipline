@@ -42,7 +42,7 @@ jobs:
 
         run: |
 
-          # Fonction reimport — ferme automatiquement les findings corrigés
+          # Fonction reimport  ferme automatiquement les findings corrigés
           # test_title stable = DefectDojo retrouve le bon test à chaque run
           reimport_scan() {
             FILE="$1"

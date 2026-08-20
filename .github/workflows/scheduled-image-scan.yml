@@ -2,7 +2,7 @@ name: Scan planifié de l'image en production
 
 on:
   schedule:
-    # Tous les jours à 6h00 UTC — indépendant des push, pour détecter les CVE
+    # Tous les jours à 6h00 UTC  indépendant des push, pour détecter les CVE
     # publiées après coup sur des paquets déjà présents dans l'image déployée.
     - cron: "0 6 * * *"
   workflow_dispatch: {}

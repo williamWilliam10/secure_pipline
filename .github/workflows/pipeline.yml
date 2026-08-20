@@ -39,7 +39,7 @@ jobs:
   defectdojo:
     name: Import vers DefectDojo
     # Tourne toujours, même si deploy échoue
-    # N'attend PAS le deploy — les scans suffisent
+    # N'attend PAS le deploy  les scans suffisent
     if: always()
     needs:
       - security-scans

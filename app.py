@@ -53,7 +53,7 @@ def health():
 @app.get("/check-config")
 def check_config():
     """Vérifie qu'une configuration requise est bien injectée via l'environnement,
-    sans jamais exposer sa valeur — utile pour valider un déploiement sans fuiter de secret."""
+    sans jamais exposer sa valeur  utile pour valider un déploiement sans fuiter de secret."""
     is_configured = bool(os.environ.get("EXTERNAL_API_KEY"))
     status_code = 200 if is_configured else 503
     return jsonify(external_api_key_configured=is_configured), status_code
@@ -62,5 +62,5 @@ def check_config():
 if __name__ == "__main__":
     # Serveur de dev Werkzeug : lié à localhost par défaut pour ne jamais exposer
     # publiquement par accident. Utiliser gunicorn (voir Dockerfile) pour tout
-    # déploiement réel — c'est aussi ce que fait le conteneur de production.
+    # déploiement réel  c'est aussi ce que fait le conteneur de production.
     app.run(host=os.environ.get("FLASK_RUN_HOST", "127.0.0.1"), port=5000)
