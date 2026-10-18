@@ -22,8 +22,7 @@ class TestAuthenticationSecurity(unittest.TestCase):
                     username TEXT PRIMARY KEY,
                     password_hash TEXT NOT NULL
                 )
-            """)
-            
+            """)   
             # Génération d'un vrai hash bcrypt pour le test
             self.test_user = "alice"
             self.test_password = os.environ.get("TEST_USER_PASSWORD") or secrets.token_urlsafe(16)
