@@ -6,7 +6,6 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-
 def verifier_authentification_utilisateur(nom_utilisateur: str, mot_passe_fourni: str, db_path: str = "secure_users.db") -> bool:
     """
     Vérifie les identifiants d'un utilisateur contre la base SQLite (mots de passe
