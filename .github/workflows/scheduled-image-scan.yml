@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   packages: read
+  actions: read
   id-token: write # requis pour l'auth OIDC GitHub -> Vault
 
 jobs:
