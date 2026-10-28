@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault-community
+    user: root
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./vault-config.hcl:/vault/config/vault-config.hcl:ro
+      - vault-data:/vault/file
+    entrypoint: vault server -config=/vault/config/vault-config.hcl
+    restart: unless-stopped
+
+volumes:
+  vault-data:
