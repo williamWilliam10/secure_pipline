@@ -37,10 +37,10 @@ jobs:
           url: ${{ secrets.VAULT_ADDR }}
           role: secure-pipeline-ci
           secrets: |
-            secure-pipeline/defectdojo DEFECTDOJO_URL | DD_URL;
-            secure-pipeline/defectdojo DEFECTDOJO_API_KEY | DD_API_KEY;
-            secure-pipeline/defectdojo DEFECTDOJO_PRODUCT_NAME | DD_PRODUCT_NAME;
-            secure-pipeline/defectdojo DEFECTDOJO_ENGAGEMENT_NAME | DD_ENGAGEMENT_NAME;
+            secure-pipeline/defectdojo DEFECTDOJO_URL | DD_URL ;
+            secure-pipeline/defectdojo DEFECTDOJO_API_KEY | DD_API_KEY ;
+            secure-pipeline/defectdojo DEFECTDOJO_PRODUCT_NAME | DD_PRODUCT_NAME ;
+            secure-pipeline/defectdojo DEFECTDOJO_ENGAGEMENT_NAME | DD_ENGAGEMENT_NAME ;
 
       - name: Import vers DefectDojo (reimport avec fermeture auto)
         shell: bash
